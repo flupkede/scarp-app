@@ -44,7 +44,7 @@
 	const API_BASE: string =
 		import.meta.env.VITE_PUBLIC_API_URL !== undefined
 			? import.meta.env.VITE_PUBLIC_API_URL
-			: 'http://localhost:8000';
+			: 'http://localhost:11000';
 
 	// Layer state (reactive object shared with Map + LayerToggle)
 	let layerState = $state({
@@ -241,7 +241,7 @@
 				<div class="text-center max-w-md">
 					<div class="text-2xl font-serif text-red-700 mb-2">Data load failed</div>
 					<p class="text-sm text-stone-600 mb-4">{dataError}</p>
-					<p class="text-xs text-stone-400">Make sure the backend is running on port 8000 or set VITE_PUBLIC_API_URL</p>
+					<p class="text-xs text-stone-400">Make sure the backend is running on port 11000 or set VITE_PUBLIC_API_URL</p>
 				</div>
 			</div>
 		{:else}
