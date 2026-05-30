@@ -29,6 +29,36 @@
 				: 'text-amber-500'
 	);
 
+	/** Return the nearest named fjord/region for a slide coordinate. */
+	const FJORDS = [
+		{ name: 'Lituya Bay', lon: -137.7, lat: 58.65 },
+		{ name: 'Barry Arm', lon: -148.15, lat: 61.15 },
+		{ name: 'Tracy Arm', lon: -133.55, lat: 57.85 },
+		{ name: 'Portage Lake', lon: -148.85, lat: 60.78 },
+		{ name: 'Pedersen Bay', lon: -149.3, lat: 60.05 },
+		{ name: 'Glacier Bay', lon: -136.5, lat: 58.65 },
+		{ name: 'Icy Bay', lon: -141.5, lat: 60.1 },
+		{ name: 'Yakutat Bay', lon: -139.8, lat: 59.6 },
+		{ name: 'Turnagain Arm', lon: -149.7, lat: 60.9 },
+		{ name: 'Sitka', lon: -135.3, lat: 57.05 },
+		{ name: 'Seward', lon: -149.45, lat: 60.1 },
+		{ name: 'Haines', lon: -135.45, lat: 59.25 },
+		{ name: 'Skagway', lon: -135.3, lat: 59.45 },
+		{ name: 'Juneau', lon: -134.4, lat: 58.3 },
+		{ name: 'Valdez', lon: -146.35, lat: 61.15 },
+		{ name: 'Whittier', lon: -148.7, lat: 60.8 },
+		{ name: 'Ketchikan', lon: -131.65, lat: 55.35 }
+	];
+	function nearestFjord(lon: number, lat: number): string {
+		let minDist = Infinity;
+		let closest = 'SE Alaska';
+		for (const f of FJORDS) {
+			const d = Math.sqrt((lon - f.lon) ** 2 + (lat - f.lat) ** 2);
+			if (d < minDist) { minDist = d; closest = f.name; }
+		}
+		return closest;
+	}
+
 	/** Map a raw source code to a short badge label + an explanatory tooltip. */
 	function sourceBadge(source: string | undefined): { label: string; title: string } {
 		switch ((source || '').toLowerCase()) {
@@ -139,7 +169,7 @@
 								class="inline-block flex-shrink-0 px-1.5 py-0.5 rounded-md border border-black text-black text-[9px] font-bold leading-none tracking-wide cursor-help"
 								title={badge.title}
 							>{badge.label}</span>
-							<span class="truncate">{slide.name && slide.name !== 'nan' ? slide.name : 'Unnamed slide'}</span>
+							<span class="truncate">{slide.name && slide.name !== 'nan' ? slide.name : nearestFjord(slide.geometry.coordinates[0], slide.geometry.coordinates[1]) + ' area'}</span>
 						</span>
 						<span class="text-stone-400 flex-shrink-0">{slide.distance_km.toFixed(1)} km</span>
 					</div>
