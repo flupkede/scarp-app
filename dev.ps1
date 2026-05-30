@@ -157,7 +157,7 @@ function Start-Services {
         }
 
         Write-Label "  Starting frontend on port $FrontendPort..." "White"
-        $frontendCmd = "pnpm dev --port $FrontendPort >> '$FrontendLog' 2>> '$FrontendErrLog'"
+        $frontendCmd = "pnpm dev >> '$FrontendLog' 2>> '$FrontendErrLog'"
         $proc = Start-Process -FilePath "pwsh" `
             -ArgumentList "-NoProfile", "-Command", $frontendCmd `
             -WorkingDirectory $frontendDir `
