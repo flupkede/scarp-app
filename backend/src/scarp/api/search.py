@@ -22,27 +22,25 @@ logger = logging.getLogger("scarp.search")
 
 router = APIRouter(prefix="/api", tags=["search"])
 
-SYSTEM_PROMPT = """You filter landslide monitoring priority zones for Southeast Alaska.
+SYSTEM_PROMPT = """You are a filter for landslide monitoring priority zones in Southeast Alaska.
 
-Each zone is a candidate sensor placement site with these properties:
-- id (string like "site-001")
-- rank (1 = highest risk, 120 = lowest)
-- score (0.0 to 1.0)
-- influence_radius_km (always 3)
-- components:
-    - susceptibility (0-1): USGS DEM-derived slope stability
-    - fjord_wall (0-1): steep terrain adjacent to deep water
-    - slope_factor (0-1): steep slope presence
-    - proximity (0-1): inverse distance to nearest known landslide
-    - exposure (0-1): buildings, roads, tourism, marine traffic
-    - coverage (0-1): existing monitoring coverage (0 = unmonitored)
-    - coast_dist_km: distance to coastline
+RULES — follow exactly:
+1. ALWAYS call the filter_zones tool. Never ask clarifying questions. Never reply with text only.
+2. Make your best guess at filter parameters from the user's query. If uncertain, use broad/permissive values.
+3. "cruise ships", "tourism", "ferries", "ports", "marine traffic" → min_exposure >= 0.6
+4. "unmonitored", "no sensors", "coverage gap" → filter by coverage = 0 (no filter param needed, just top_n)
+5. "top N", "highest risk", "most urgent" → max_rank = N (default 20)
+6. "near <place>" → use near_lat/near_lon for known SE Alaska locations:
+   Juneau: 58.3, -134.4 | Ketchikan: 55.3, -131.6 | Sitka: 57.1, -135.3
+   Glacier Bay: 58.5, -136.0 | Skagway: 59.5, -135.3 | Haines: 59.2, -135.4
+   Seward: 60.1, -149.4 | Whittier: 60.8, -148.7 | Valdez: 61.1, -146.4
+7. Vague queries → return top 20 by rank (max_rank=20).
 
-The centroid lon/lat is in the geometry.coordinates field.
+Zone properties: id, rank (1=highest risk), score (0-1), components:
+  susceptibility, fjord_wall, slope_factor, proximity, exposure, coverage, coast_dist_km.
+Centroid lon/lat is in geometry.coordinates.
 
-Call the filter_zones tool with appropriate parameters.
-Briefly explain (1-2 sentences) what you filtered for.
-"""
+After calling the tool, write ONE sentence explaining what you filtered for."""
 
 FILTER_TOOL = {
     "type": "function",
@@ -169,6 +167,7 @@ def _call_openai_compat(query: str) -> tuple[dict, str]:
             {"role": "user", "content": query[:500]},
         ],
         tools=[FILTER_TOOL],  # type: ignore[arg-type]
+        tool_choice={"type": "function", "function": {"name": "filter_zones"}},
         temperature=0.3,
         max_tokens=512,
     )
@@ -200,6 +199,7 @@ def _call_anthropic(query: str) -> tuple[dict, str]:
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": query[:500]}],
         tools=[tool],  # type: ignore[arg-type]
+        tool_choice={"type": "any"},  # force tool call, never plain text
         temperature=0.3,
         max_tokens=512,
     )
