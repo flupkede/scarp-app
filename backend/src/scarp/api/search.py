@@ -14,7 +14,8 @@ from typing import Any
 from fastapi import APIRouter, Request
 
 from ..config import settings
-from .schemas import SearchRequest
+from ..geo import haversine_km
+from .schemas import SearchRequest, SearchResponse
 
 logger = logging.getLogger("scarp.search")
 
@@ -94,8 +95,6 @@ def _apply_filters(
     top_n_default: int = 20,
 ) -> list[dict]:
     """Apply LLM-returned filter parameters to zone features."""
-    import math
-
     result = list(features)
 
     if "min_score" in filters and filters["min_score"] is not None:
@@ -124,21 +123,12 @@ def _apply_filters(
         lon = filters["near_lon"]
         max_dist = filters.get("max_distance_km", 50)
 
-        def _haversine(f: dict) -> float:
+        def _dist(f: dict) -> float:
             flon, flat = f["geometry"]["coordinates"]
-            earth_radius_km = 6371.0
-            dlat = math.radians(flat - lat)
-            dlon = math.radians(flon - lon)
-            a = (
-                math.sin(dlat / 2) ** 2
-                + math.cos(math.radians(lat))
-                * math.cos(math.radians(flat))
-                * math.sin(dlon / 2) ** 2
-            )
-            return earth_radius_km * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+            return haversine_km(lon, lat, flon, flat)
 
-        result = [f for f in result if _haversine(f) <= max_dist]
-        result.sort(key=lambda f: _haversine(f))
+        result = [f for f in result if _dist(f) <= max_dist]
+        result.sort(key=_dist)
 
     # Sort by rank
     result.sort(key=lambda f: f["properties"]["rank"])
@@ -224,7 +214,7 @@ def _call_anthropic(query: str) -> tuple[dict, str]:
     return args, explanation
 
 
-@router.post("/search")
+@router.post("/search", response_model=SearchResponse)
 async def search_zones(request: Request, body: SearchRequest) -> dict[str, Any]:
     """
     Natural-language search for zones.
@@ -248,7 +238,9 @@ async def search_zones(request: Request, body: SearchRequest) -> dict[str, Any]:
             args, explanation = _call_openai_compat(body.query)
 
         filtered = _apply_filters(features, args)
-        explanation = explanation or f"Filtered by: {json.dumps(args)}. Showing {len(filtered)} sites."
+        explanation = explanation or (
+            f"Filtered by: {json.dumps(args)}. Showing {len(filtered)} sites."
+        )
 
         return {
             "type": "FeatureCollection",

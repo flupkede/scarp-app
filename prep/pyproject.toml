@@ -1,0 +1,16 @@
+[project]
+name = "prep"
+version = "0.1.0"
+description = "Scarp data pipeline: download, normalize, score"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "geopandas>=1.1.3",
+    "httpx>=0.28.1",
+    "numpy>=2.4.6",
+    "osmium>=4.3.1",
+    "pyproj>=3.7.2",
+    "rasterio>=1.5.0",
+    "scipy>=1.17.1",
+    "shapely>=2.1.2",
+]

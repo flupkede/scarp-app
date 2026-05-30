@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-import math
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
+
+from ..geo import haversine_km
+from .schemas import NearbySlide
 
 router = APIRouter(prefix="/api/zones", tags=["zones"])
 
@@ -19,19 +21,6 @@ def _slides_data(request: Request) -> list[dict]:
     """Get slides features list from app state."""
     return request.app.state.slides_features
 
-
-def _haversine_km(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
-    """Haversine distance in km between two lon/lat points."""
-    earth_radius_km = 6371.0
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = (
-        math.sin(dlat / 2) ** 2
-        + math.cos(math.radians(lat1))
-        * math.cos(math.radians(lat2))
-        * math.sin(dlon / 2) ** 2
-    )
-    return earth_radius_km * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 @router.get("")
@@ -81,7 +70,7 @@ async def get_zone_by_id(request: Request, zone_id: str) -> dict[str, Any]:
     raise HTTPException(status_code=404, detail=f"Zone {zone_id} not found")
 
 
-@router.get("/{zone_id}/nearby_slides")
+@router.get("/{zone_id}/nearby_slides", response_model=list[NearbySlide])
 async def get_nearby_slides(request: Request, zone_id: str) -> list[dict]:
     """
     Return known slides within 20km of the zone centroid.
@@ -107,7 +96,7 @@ async def get_nearby_slides(request: Request, zone_id: str) -> list[dict]:
     for slide in slides:
         coords = slide["geometry"]["coordinates"]
         s_lon, s_lat = coords[0], coords[1]
-        dist = _haversine_km(lon, lat, s_lon, s_lat)
+        dist = haversine_km(lon, lat, s_lon, s_lat)
         if dist <= max_dist_km:
             nearby.append({
                 "id": slide["properties"]["id"],
