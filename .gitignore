@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+
+# Node / SvelteKit
+node_modules/
+.svelte-kit/
+.vite/
+
+# Data — raw downloads stay local
+data/raw/
+*.tif
+*.tiff
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.pbf
+*.gpkg
+
+# Allow processed outputs (small enough to commit)
+!data/processed/
+
+# Local config
+.env
+.env.local
+*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dev environment
+.dev-logs/
+
+# IDE
+.vscode/
+.idea/

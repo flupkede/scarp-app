@@ -1,0 +1,20 @@
+{
+  "generated_at": "2026-05-29T15:35:50.055746+00:00",
+  "pipeline": "scarp phase 2.5 v3 \u2014 90m resolution",
+  "cell_size_m": 90,
+  "grid_width": 16402,
+  "grid_height": 13999,
+  "total_cells": 229611598,
+  "weights": {
+    "susceptibility": 0.25,
+    "fjord_wall": 0.25,
+    "proximity": 0.2,
+    "slope": 0.1,
+    "exposure": 0.1,
+    "gap": 0.1
+  },
+  "neighborhood_cells": 45,
+  "neighborhood_km": 4.0,
+  "total_candidates": 120,
+  "elapsed_seconds": 547.9
+}

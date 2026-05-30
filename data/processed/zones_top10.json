@@ -1,0 +1,252 @@
+[
+  {
+    "type": "Feature",
+    "properties": {
+      "id": "site-001",
+      "rank": 1,
+      "score": 0.9996,
+      "influence_radius_km": 3,
+      "components": {
+        "susceptibility": 1.0,
+        "fjord_wall": 1.0,
+        "slope_factor": 1.0,
+        "proximity": 0.9981,
+        "exposure": 1.0,
+        "coverage": 0.0,
+        "coast_dist_km": 0.0
+      }
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [
+        -149.70306887099554,
+        60.95056803256725
+      ]
+    }
+  },
+  {
+    "type": "Feature",
+    "properties": {
+      "id": "site-002",
+      "rank": 2,
+      "score": 0.9987,
+      "influence_radius_km": 3,
+      "components": {
+        "susceptibility": 1.0,
+        "fjord_wall": 1.0,
+        "slope_factor": 1.0,
+        "proximity": 0.9937,
+        "exposure": 1.0,
+        "coverage": 0.0,
+        "coast_dist_km": 0.0
+      }
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [
+        -135.26565071506664,
+        56.96949191915743
+      ]
+    }
+  },
+  {
+    "type": "Feature",
+    "properties": {
+      "id": "site-003",
+      "rank": 3,
+      "score": 0.9842,
+      "influence_radius_km": 3,
+      "components": {
+        "susceptibility": 1.0,
+        "fjord_wall": 0.9921,
+        "slope_factor": 1.0,
+        "proximity": 0.9307,
+        "exposure": 1.0,
+        "coverage": 0.0,
+        "coast_dist_km": 0.0397
+      }
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [
+        -148.6995990185708,
+        60.792781104463295
+      ]
+    }
+  },
+  {
+    "type": "Feature",
+    "properties": {
+      "id": "site-004",
+      "rank": 4,
+      "score": 0.9789,
+      "influence_radius_km": 3,
+      "components": {
+        "susceptibility": 1.0,
+        "fjord_wall": 0.9715,
+        "slope_factor": 1.0,
+        "proximity": 0.9729,
+        "exposure": 1.0,
+        "coverage": 0.0857,
+        "coast_dist_km": 0.1423
+      }
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [
+        -149.5881953595543,
+        60.98402563331613
+      ]
+    }
+  },
+  {
+    "type": "Feature",
+    "properties": {
+      "id": "site-005",
+      "rank": 5,
+      "score": 0.9773,
+      "influence_radius_km": 3,
+      "components": {
+        "susceptibility": 1.0,
+        "fjord_wall": 0.9454,
+        "slope_factor": 1.0,
+        "proximity": 0.9548,
+        "exposure": 1.0,
+        "coverage": 0.0,
+        "coast_dist_km": 0.273
+      }
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [
+        -149.38713483758983,
+        60.951614410973335
+      ]
+    }
+  },
+  {
+    "type": "Feature",
+    "properties": {
+      "id": "site-006",
+      "rank": 6,
+      "score": 0.9635,
+      "influence_radius_km": 3,
+      "components": {
+        "susceptibility": 1.0,
+        "fjord_wall": 0.8931,
+        "slope_factor": 1.0,
+        "proximity": 0.9512,
+        "exposure": 1.0,
+        "coverage": 0.0,
+        "coast_dist_km": 0.5204
+      }
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [
+        -134.70019529786728,
+        58.38632571703625
+      ]
+    }
+  },
+  {
+    "type": "Feature",
+    "properties": {
+      "id": "site-007",
+      "rank": 7,
+      "score": 0.9565,
+      "influence_radius_km": 3,
+      "components": {
+        "susceptibility": 1.0,
+        "fjord_wall": 0.9912,
+        "slope_factor": 1.0,
+        "proximity": 0.985,
+        "exposure": 0.6175,
+        "coverage": 0.0,
+        "coast_dist_km": 0.0441
+      }
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [
+        -135.3094335199348,
+        56.90166556375731
+      ]
+    }
+  },
+  {
+    "type": "Feature",
+    "properties": {
+      "id": "site-008",
+      "rank": 8,
+      "score": 0.9553,
+      "influence_radius_km": 3,
+      "components": {
+        "susceptibility": 1.0,
+        "fjord_wall": 0.8913,
+        "slope_factor": 1.0,
+        "proximity": 0.9126,
+        "exposure": 1.0,
+        "coverage": 0.0,
+        "coast_dist_km": 0.5435
+      }
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [
+        -149.26835713435966,
+        60.941119925943276
+      ]
+    }
+  },
+  {
+    "type": "Feature",
+    "properties": {
+      "id": "site-009",
+      "rank": 9,
+      "score": 0.9478,
+      "influence_radius_km": 3,
+      "components": {
+        "susceptibility": 1.0,
+        "fjord_wall": 0.8715,
+        "slope_factor": 1.0,
+        "proximity": 0.8993,
+        "exposure": 1.0,
+        "coverage": 0.0,
+        "coast_dist_km": 0.6423
+      }
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [
+        -149.46332771167928,
+        60.979962747047054
+      ]
+    }
+  },
+  {
+    "type": "Feature",
+    "properties": {
+      "id": "site-010",
+      "rank": 10,
+      "score": 0.9458,
+      "influence_radius_km": 3,
+      "components": {
+        "susceptibility": 1.0,
+        "fjord_wall": 0.9031,
+        "slope_factor": 1.0,
+        "proximity": 0.9965,
+        "exposure": 1.0,
+        "coverage": 0.2929,
+        "coast_dist_km": 0.4846
+      }
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [
+        -149.21157449039174,
+        60.88509520580273
+      ]
+    }
+  }
+]

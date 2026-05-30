@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+	--color-paper: #faf7f2;
+	--color-ink: #1c1917;
+	--color-navy: #0f172a;
+	--color-amber: #f59e0b;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	font-family: 'Inter', system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4 {
+	font-family: 'Fraunces', Georgia, serif;
+}
