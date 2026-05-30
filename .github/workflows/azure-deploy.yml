@@ -51,9 +51,9 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
-          app_location: frontend
-          output_location: build
-          skip_app_build: true   # use pre-built pnpm output; skip Oryx npm rebuild
+          app_location: frontend/build  # pre-built by pnpm; skip_app_build requires pointing here
+          output_location: ""
+          skip_app_build: true
           skip_api_build: true
 
   # ── Job 2: Deploy FastAPI backend → Azure App Service ────────────────────────
