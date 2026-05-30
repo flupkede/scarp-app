@@ -19,13 +19,13 @@
 
 <div class="px-4 py-3 border-b border-stone-200">
 	<form onsubmit={handleSubmit}>
-		<div class="relative">
+		<div class="relative rounded-lg border border-stone-300 bg-white focus-within:ring-2 focus-within:ring-amber-400 focus-within:border-transparent">
 			<input
 				type="text"
 				bind:value={query}
 				placeholder="e.g. near cruise ship routes"
 				disabled={loading}
-				class="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-ink placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+				class="w-full rounded-lg bg-transparent px-3 py-2 text-sm text-ink placeholder:text-stone-400 focus:outline-none"
 			/>
 			<button
 				type="submit"

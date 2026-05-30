@@ -369,17 +369,15 @@
 	<div class="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-3 text-xs pointer-events-none max-w-[200px]">
 		<h4 class="font-serif font-semibold text-sm mb-2 text-ink">SENSOR PLACEMENT</h4>
 		<div class="flex items-center gap-2 mb-1">
-			<span class="inline-block w-4 h-4 rounded-full border-2 border-ink bg-white flex-shrink-0 relative">
-				<span class="absolute inset-1 bg-ink rounded-full"></span>
-			</span>
-			<span>Recommended site</span>
-		</div>
-		<div class="flex items-center gap-2 mb-1">
-			<span class="inline-block w-4 h-4 rounded-full bg-red-600 border border-white flex-shrink-0"></span>
+			<span class="inline-block w-3 h-3 rounded-full bg-red-600 flex-shrink-0"></span>
 			<span>Top 10 urgent</span>
 		</div>
+		<div class="flex items-center gap-2 mb-1">
+			<span class="inline-block w-3 h-3 rounded-full border-2 border-ink bg-white flex-shrink-0"></span>
+			<span>Recommended site</span>
+		</div>
 		<div class="flex items-center gap-2 mb-3">
-			<span class="inline-block w-3 h-3 rounded-full bg-blue-500 border border-white flex-shrink-0"></span>
+			<span class="inline-block w-3 h-3 rounded-full bg-blue-500 flex-shrink-0"></span>
 			<span>Existing monitoring</span>
 		</div>
 

@@ -216,14 +216,14 @@
 
 <div class="h-screen w-screen overflow-hidden flex flex-col bg-stone-50">
 	<!-- Header bar -->
-	<header class="h-10 bg-navy flex items-center px-4 justify-between flex-shrink-0 z-50">
+	<header class="h-11 flex items-center px-4 justify-between flex-shrink-0 z-50" style="background:#0f172a">
 		<div class="flex items-center gap-3">
 			<h1 class="text-white font-serif font-bold text-lg tracking-wide">SCARP</h1>
-			<span class="text-white/40 text-xs">Landslide monitoring placement</span>
+			<span class="hidden sm:inline text-white/40 text-xs">Landslide sensor placement</span>
 		</div>
-		<nav class="flex items-center gap-4">
-			<a href="/story" class="text-white/50 hover:text-white/80 text-xs">Story</a>
-			<a href="/about" class="text-white/50 hover:text-white/80 text-xs">About</a>
+		<nav class="flex items-center gap-3">
+			<a href="/story" class="text-white/60 hover:text-white text-xs px-2 py-1 rounded hover:bg-white/10 transition-colors">Story</a>
+			<a href="/about" class="text-white/60 hover:text-white text-xs px-2 py-1 rounded hover:bg-white/10 transition-colors">About</a>
 		</nav>
 	</header>
 
