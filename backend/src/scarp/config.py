@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # CORS — comma-separated in env, sane defaults
     cors_allow_origins: str = (
-        "http://localhost:11001,http://localhost:4173,https://scarp.dsoft.services"
+        "http://localhost:5173,http://localhost:4173,http://localhost:11001,https://scarp.dsoft.services"
     )
 
     enable_search: bool = True

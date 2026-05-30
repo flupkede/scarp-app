@@ -10,10 +10,10 @@ param(
     [string]$Action = "status",
 
     [Parameter(Mandatory = $false)]
-    [int]$BackendPort = 11000,
+    [int]$BackendPort = 8000,
 
     [Parameter(Mandatory = $false)]
-    [int]$FrontendPort = 11001,
+    [int]$FrontendPort = 5173,
 
     [Parameter(Mandatory = $false)]
     [string]$BackendDir = "backend",
@@ -115,8 +115,10 @@ function Start-Services {
         }
 
         Write-Label "  Starting backend on port $BackendPort..." "White"
+        $backendCmd = "uv run uvicorn scarp.api.main:app --port $BackendPort --reload >> '$BackendLog' 2>> '$BackendErrLog'"
         $proc = Start-Process -FilePath "pwsh" `
-            -ArgumentList "-NoProfile", "-Command", "uv run --project `"$backendDir`" uvicorn scarp.api.main:app --port $BackendPort --reload" `
+            -ArgumentList "-NoProfile", "-Command", $backendCmd `
+            -WorkingDirectory $backendDir `
             -WindowStyle Hidden `
             -PassThru
 
@@ -149,8 +151,9 @@ function Start-Services {
         }
 
         Write-Label "  Starting frontend on port $FrontendPort..." "White"
+        $frontendCmd = "pnpm dev --port $FrontendPort >> '$FrontendLog' 2>> '$FrontendErrLog'"
         $proc = Start-Process -FilePath "pwsh" `
-            -ArgumentList "-NoProfile", "-Command", "pnpm dev" `
+            -ArgumentList "-NoProfile", "-Command", $frontendCmd `
             -WorkingDirectory $frontendDir `
             -WindowStyle Hidden `
             -PassThru
@@ -279,46 +282,36 @@ function Show-Status {
 }
 
 function Show-Logs {
-    Write-Label "`nDev logs:" "Cyan"
+    Write-Label "`nDev logs (last 20 lines each):" "Cyan"
     Write-Label ""
 
-    $found = $false
-
-    # Backend log
-    $backendPid = Get-SavedPid $BackendPidFile
-    if ($backendPid) {
-        # Try to find the uvicorn process stdout (redirected to file)
-        # Since we use Start-Process with WindowStyle Hidden, logs go to the pwsh child
-        # For now, show the PID info
-        $proc = Get-Process -Id $backendPid -ErrorAction SilentlyContinue
-        if ($proc) {
-            Write-Label "  Backend (PID $backendPid): running" "Green"
-        } else {
-            Write-Label "  Backend (PID $backendPid): not running" "Red"
+    if (Test-Path $BackendLog) {
+        Write-Label "  --- backend stdout ---" "DarkGray"
+        Get-Content $BackendLog -Tail 20 | ForEach-Object { Write-Host "  $_" }
+    }
+    if (Test-Path $BackendErrLog) {
+        $errLines = Get-Content $BackendErrLog -Tail 20
+        if ($errLines) {
+            Write-Label "  --- backend stderr ---" "DarkGray"
+            $errLines | ForEach-Object { Write-Host "  $_" }
         }
-        $found = $true
     }
-
-    # Frontend log
-    $frontendPid = Get-SavedPid $FrontendPidFile
-    if ($frontendPid) {
-        $proc = Get-Process -Id $frontendPid -ErrorAction SilentlyContinue
-        if ($proc) {
-            Write-Label "  Frontend (PID $frontendPid): running" "Green"
-        } else {
-            Write-Label "  Frontend (PID $frontendPid): not running" "Red"
+    if (Test-Path $FrontendLog) {
+        Write-Label "  --- frontend stdout ---" "DarkGray"
+        Get-Content $FrontendLog -Tail 20 | ForEach-Object { Write-Host "  $_" }
+    }
+    if (Test-Path $FrontendErrLog) {
+        $errLines = Get-Content $FrontendErrLog -Tail 20
+        if ($errLines) {
+            Write-Label "  --- frontend stderr ---" "DarkGray"
+            $errLines | ForEach-Object { Write-Host "  $_" }
         }
-        $found = $true
     }
 
-    if (-not $found) {
-        Write-Label "  No PID files found. Services may not be started via dev.ps1." "Yellow"
+    if (-not (Test-Path $BackendLog) -and -not (Test-Path $FrontendLog)) {
+        Write-Label "  No log files found. Run '.\dev.ps1 start' first." "Yellow"
     }
 
-    Write-Label ""
-    Write-Label "  Tip: for live logs, run services in separate terminals:" "DarkGray"
-    Write-Label "    Backend:  uv run --project backend uvicorn scarp.api.main:app --port $BackendPort --reload" "DarkGray"
-    Write-Label "    Frontend: pnpm dev" "DarkGray"
     Write-Label ""
 }
 
