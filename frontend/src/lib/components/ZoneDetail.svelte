@@ -30,9 +30,9 @@
 	);
 </script>
 
-<div class="absolute top-0 right-0 h-full w-80 bg-paper shadow-2xl z-40 flex flex-col overflow-hidden border-l border-stone-200">
+<div class="absolute top-0 right-0 h-full w-80 shadow-2xl z-40 flex flex-col overflow-hidden" style="background: rgba(255,255,255,0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-left: 1px solid rgba(255,255,255,0.3);">
 	<!-- Header -->
-	<div class="px-4 py-4 border-b border-stone-200 flex items-start justify-between bg-paper">
+	<div class="px-4 py-4 flex items-start justify-between" style="border-bottom: 1px solid rgba(120,113,108,0.15);">
 		<div>
 			<h3 class="font-serif font-bold text-lg text-ink">
 				SITE #{site.properties.rank} <span class="text-stone-500 text-sm">— {regionLabel}</span>
@@ -106,11 +106,19 @@
 			</h4>
 			<div class="space-y-1.5">
 				{#each nearbySlides.slice(0, 5) as slide, i}
-					<div class="text-xs text-stone-600 flex justify-between">
-						<span>{slide.name && slide.name !== 'nan' ? slide.name : `${slide.source || 'Unknown'} slide`}</span>
+					<div class="text-xs text-stone-600 flex justify-between items-center">
+						<span class="flex items-center gap-1.5">
+							<span class="inline-block w-2 h-2 rounded-full flex-shrink-0 {slide.source === 'dggs' ? 'bg-amber-600' : slide.source === 'usgs' ? 'bg-blue-600' : slide.source === 'usfs' ? 'bg-green-700' : 'bg-stone-400'}"></span>
+							{slide.name && slide.name !== 'nan' ? slide.name : `${(slide.source || 'unknown').toUpperCase()} slide`}
+						</span>
 						<span class="text-stone-400">{slide.distance_km.toFixed(1)} km</span>
 					</div>
 				{/each}
+			</div>
+			<div class="mt-2 flex gap-3 text-[10px] text-stone-400">
+				<span class="flex items-center gap-1"><span class="inline-block w-2 h-2 rounded-full bg-amber-600"></span>DGGS</span>
+				<span class="flex items-center gap-1"><span class="inline-block w-2 h-2 rounded-full bg-blue-600"></span>USGS</span>
+				<span class="flex items-center gap-1"><span class="inline-block w-2 h-2 rounded-full bg-green-700"></span>USFS</span>
 			</div>
 		{:else}
 			<p class="text-xs text-stone-400 mt-4 italic">No nearby slides found (backend query pending)</p>
