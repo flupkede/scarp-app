@@ -12,6 +12,7 @@ dependencies = [
   "pydantic>=2.11",
   "pydantic-settings>=2.6",
   "python-multipart>=0.0.12",
+  "gunicorn>=21",
 ]
 
 [dependency-groups]

@@ -1,0 +1,86 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # ── Job 1: Build SvelteKit static site → Azure Static Web App ───────────────
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    name: Frontend → Azure SWA
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        working-directory: frontend
+        env:
+          PUBLIC_API_URL: ""  # SWA proxies /api/* to the linked backend
+        run: pnpm build
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: frontend
+          output_location: build
+          skip_api_build: true
+
+  # ── Job 2: Deploy FastAPI backend → Azure App Service ────────────────────────
+  deploy-backend:
+    runs-on: ubuntu-latest
+    name: Backend → Azure App Service
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync --no-dev
+
+      - name: Package backend for deployment
+        working-directory: backend
+        run: |
+          # Create a flat install layout that App Service Oryx can pick up
+          uv pip install --target ./deploy_pkg \
+            fastapi uvicorn[standard] shapely httpx openai \
+            pydantic pydantic-settings python-multipart gunicorn
+          cp -r src/scarp deploy_pkg/scarp
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: scarp-api
+          publish-profile: ${{ secrets.AZURE_APP_SERVICE_PUBLISH_PROFILE }}
+          package: backend/deploy_pkg
+          startup-command: >
+            gunicorn -w 2 -k uvicorn.workers.UvicornWorker
+            --bind 0.0.0.0:8000 scarp.api.main:app
