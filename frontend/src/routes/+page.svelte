@@ -260,22 +260,24 @@
 				<LayerToggle {layerState} hasConfidence={confidenceData !== null} />
 			</aside>
 
-			<!-- Map area -->
-			<div class="flex-1 relative">
-				<MapComponent
-					{layerState}
-					sites={{ type: 'FeatureCollection', features: allSites }}
-					top10={top10Sites.map((f) => ({
-						type: 'Feature' as const,
-						properties: f.properties,
-						geometry: f.geometry
-					}))}
-					influenceGeojson={influenceData}
-					slides={slidesData}
-					stations={stationsData}
-					confidence={confidenceData}
-					onSelectSite={handleSelectSite}
-				/>
+			<!-- Map area — faint USGS Tracy Arm photo behind a floating ~90% map -->
+			<div class="flex-1 relative flex items-center justify-center map-stage">
+				<div class="map-frame">
+					<MapComponent
+						{layerState}
+						sites={{ type: 'FeatureCollection', features: allSites }}
+						top10={top10Sites.map((f) => ({
+							type: 'Feature' as const,
+							properties: f.properties,
+							geometry: f.geometry
+						}))}
+						influenceGeojson={influenceData}
+						slides={slidesData}
+						stations={stationsData}
+						confidence={confidenceData}
+						onSelectSite={handleSelectSite}
+					/>
+				</div>
 
 				{#if selectedSite}
 					<ZoneDetail
@@ -299,3 +301,26 @@
 {#if showSplash && !skipSplash}
 	<Splash onDismiss={() => (showSplash = false)} />
 {/if}
+
+<style>
+	/* Faint USGS Tracy Arm photo behind the floating map */
+	.map-stage {
+		background-color: #1c1917;
+		background-image: linear-gradient(rgba(28, 25, 23, 0.82), rgba(28, 25, 23, 0.82)),
+			url('/splash-tracy-arm.jpg');
+		background-size: cover;
+		background-position: center;
+		padding: 1.25rem;
+	}
+
+	/* The map floats at ~90% of the stage, framed and lifted off the photo */
+	.map-frame {
+		width: 90%;
+		height: 90%;
+		border-radius: 0.75rem;
+		overflow: hidden;
+		box-shadow:
+			0 10px 40px -8px rgba(0, 0, 0, 0.55),
+			0 0 0 1px rgba(255, 255, 255, 0.06);
+	}
+</style>
