@@ -28,13 +28,14 @@ async def get_influence(request: Request) -> dict[str, Any]:
     return request.app.state.influence
 
 
-@router.get("/confidence")
-async def get_confidence() -> JSONResponse:
-    """
-    Confidence layer — NOT YET GENERATED.
-    Returns 404 gracefully so the frontend can skip it silently.
-    """
-    return JSONResponse(
-        status_code=404,
-        content={"detail": "Confidence layer not yet generated"},
-    )
+@router.get("/confidence", response_model=None)
+async def get_confidence(request: Request):
+    """Return confidence FeatureCollection from data/processed/confidence.geojson."""
+    data = request.app.state.confidence
+    if data is None:
+        # Graceful fallback — prep script hasn't run yet
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Confidence layer not yet generated"},
+        )
+    return data

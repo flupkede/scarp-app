@@ -60,6 +60,15 @@ async def lifespan(app: FastAPI):
     else:
         app.state.influence = {"type": "FeatureCollection", "features": []}
 
+    # Load confidence layer if available (graceful fallback — prep may not have run yet)
+    confidence_path = data_dir / "confidence.geojson"
+    if confidence_path.exists():
+        app.state.confidence = json.loads(confidence_path.read_text())
+        logger.info("Loaded confidence layer (%d features)", len(app.state.confidence["features"]))
+    else:
+        app.state.confidence = None
+        logger.info("Confidence layer not found — serving empty")
+
     zones_count = len(app.state.zones["features"])
     slides_count = len(app.state.slides_features)
     stations_count = len(app.state.stations["features"])

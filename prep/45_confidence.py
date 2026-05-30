@@ -1,53 +1,87 @@
 #!/usr/bin/env python3
-"""Scarp — Compute data confidence layer.
+"""Scarp — Compute data-confidence layer on the COARSE 500m grid.
 
-For each cell, counts how many input layers have valid data (0-5), normalizes
-to 0.0-1.0, then polygonizes into 3 bands (low/medium/high).
+For each 500m cell, counts how many of 5 input layers have valid data,
+normalises to 0.0–1.0, bands into low / medium / high, polygonises,
+dissolves into a few big polygons, and reprojects to EPSG:4326.
 
 Usage:
     cd C:/WorkArea/AI/scarp
     uv run --project prep python prep/45_confidence.py
+    uv run --project prep python prep/45_confidence.py --force
 """
 
 import json
+import sys
 from pathlib import Path
 
 import geopandas as gpd
 import numpy as np
 import rasterio
-from rasterio.features import shapes
+from rasterio.features import rasterize, shapes
+from rasterio.transform import from_bounds
 from rasterio.warp import reproject, Resampling
-from shapely.geometry import shape
+from shapely.geometry import shape, mapping
+from shapely.ops import unary_union
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_RAW = REPO_ROOT / "data" / "raw"
 DATA_PROC = REPO_ROOT / "data" / "processed"
 INTERMEDIATE = DATA_PROC / "intermediate"
 
+# ---------------------------------------------------------------------------
+# Configuration — mirrors 50_score_zones.py exactly
+# ---------------------------------------------------------------------------
 TARGET_CRS = "EPSG:3338"
-CELL_SIZE = 90
+COARSE_CELL_SIZE = 500  # 500m — NOT 90m; this is a soft overlay
 SE_BOUNDS_3338 = (-250000, 300000, 1226203, 1559983)
 N10_NODATA = 2147483647
 
+# Band thresholds
+LOW_MAX = 0.4
+HIGH_MIN = 0.7
+
+# Geometry simplification tolerance (metres, in 3338)
+SIMPLIFY_TOL = 500
+
+# Known sites for honest reporting (name, lon, lat)
+KNOWN_SITES = [
+    ("Lituya Bay", -137.57, 58.66),
+    ("Taan Fiord", -141.22, 60.14),
+    ("Tracy Arm", -133.55, 57.80),
+    ("Barry Arm", -148.18, 61.13),
+]
+
 
 def main() -> None:
-    print("=== 45_confidence ===")
+    force = "--force" in sys.argv
+    out_path = DATA_PROC / "confidence.geojson"
+
+    # Guard: skip if output exists (unless --force)
+    if out_path.exists() and not force:
+        print(f"=== 45_confidence: {out_path.name} exists (use --force to rebuild) ===")
+        return
+
+    print("=== 45_confidence (500m coarse grid) ===\n")
 
     xmin, ymin, xmax, ymax = SE_BOUNDS_3338
-    cols = int((xmax - xmin) / CELL_SIZE)
-    rows = int((ymax - ymin) / CELL_SIZE)
-    transform = rasterio.transform.from_bounds(xmin, ymin, xmax, ymax, cols, rows)
+    cols = int((xmax - xmin) / COARSE_CELL_SIZE)
+    rows = int((ymax - ymin) / COARSE_CELL_SIZE)
+    transform = from_bounds(xmin, ymin, xmax, ymax, cols, rows)
+    print(f"  Grid: {cols} x {rows} = {cols * rows:,} cells at {COARSE_CELL_SIZE}m\n")
 
-    # Count valid layers per cell
-    layers = np.zeros((rows, cols), dtype=np.float32)
+    # Accumulator: count of valid layers per cell
+    valid_count = np.zeros((rows, cols), dtype=np.uint8)
 
-    # Layer 1: USGS n10 susceptibility valid
+    # ------------------------------------------------------------------
+    # 1. susceptibility_valid: n10_ak.tif resampled to 500m
+    # ------------------------------------------------------------------
+    print("  [1/5] USGS n10 susceptibility ...")
     n10_path = DATA_RAW / "usgs_susc" / "n10_ak.tif"
     n10_valid = np.zeros((rows, cols), dtype=bool)
     if n10_path.exists():
-        print("  Checking USGS n10 validity ...")
         with rasterio.open(n10_path) as src:
-            dest = np.zeros((rows, cols), dtype=np.float32)
+            dest = np.full((rows, cols), N10_NODATA, dtype=np.float32)
             reproject(
                 source=rasterio.band(src, 1),
                 destination=dest,
@@ -58,18 +92,21 @@ def main() -> None:
                 resampling=Resampling.nearest,
             )
         n10_valid = (dest > 0) & (dest != N10_NODATA) & ~np.isnan(dest)
-        layers += n10_valid.astype(np.float32)
+        valid_count += n10_valid.astype(np.uint8)
         print(f"    {n10_valid.sum():,} valid cells ({n10_valid.mean() * 100:.1f}%)")
     else:
-        print("  ✗ n10 not found")
+        print("    n10_ak.tif not found")
 
-    # Layer 2: DEM present
+    # ------------------------------------------------------------------
+    # 2. dem_present: any DEM tile covers the cell
+    # ------------------------------------------------------------------
+    print("  [2/5] DEM coverage ...")
     dem_dir = DATA_RAW / "dem"
+    dem_filled = np.zeros((rows, cols), dtype=bool)
     if dem_dir.exists():
-        print("  Checking DEM coverage ...")
-        dem_mask = np.zeros((rows, cols), dtype=np.float32)
-        tiles = [t for t in dem_dir.glob("*.tif") if t.stat().st_size > 1_000_000]
-        for tile in tiles:
+        tiles = sorted(t for t in dem_dir.glob("*.tif") if t.stat().st_size > 1_000_000)
+        print(f"    {len(tiles)} tiles to process")
+        for i, tile in enumerate(tiles):
             try:
                 with rasterio.open(tile) as src:
                     tile_dest = np.zeros((rows, cols), dtype=np.float32)
@@ -82,131 +119,222 @@ def main() -> None:
                         dst_crs=TARGET_CRS,
                         resampling=Resampling.nearest,
                     )
-                dem_mask = np.maximum(dem_mask, (tile_dest != 0).astype(np.float32))
-            except Exception:
-                pass
-        layers += dem_mask
-        print(f"    {dem_mask.sum():,} cells with DEM coverage")
+                dem_filled |= tile_dest != 0
+            except Exception as e:
+                print(f"    skip {tile.name}: {e}")
+            if (i + 1) % 10 == 0:
+                print(f"    ...{i + 1}/{len(tiles)} tiles")
+        valid_count += dem_filled.astype(np.uint8)
+        print(f"    {dem_filled.sum():,} cells with DEM ({dem_filled.mean() * 100:.1f}%)")
     else:
-        print("  ✗ No DEM directory")
+        print("    No DEM directory")
 
-    # Layer 3: Slide inventory within 25km
+    # ------------------------------------------------------------------
+    # 3. slide_inventory_within_25km
+    # ------------------------------------------------------------------
+    print("  [3/5] Slide inventory proximity ...")
     slides_path = INTERMEDIATE / "all_slides_3338.geojson"
     if slides_path.exists():
-        print("  Checking slide inventory proximity ...")
         from scipy.ndimage import distance_transform_edt
 
         slides = gpd.read_file(slides_path)
-        # Rasterize slide locations to binary
-        slide_mask = np.zeros((rows, cols), dtype=bool)
-        for _, feat in slides.iterrows():
-            geom = feat.geometry
-            if geom is None:
-                continue
-            x, y = (geom.centroid.x, geom.centroid.y) if geom.geom_type != "Point" else (geom.x, geom.y)
-            col = int((x - xmin) / CELL_SIZE)
-            row = int((ymax - y) / CELL_SIZE)
-            if 0 <= row < rows and 0 <= col < cols:
-                slide_mask[row, col] = True
-        # Distance in cells
-        dist_cells = distance_transform_edt(~slide_mask)
-        # Convert to km (CELL_SIZE in meters)
-        dist_km = dist_cells * CELL_SIZE / 1000.0
-        within_25km = (dist_km < 25).astype(np.float32)
-        layers += within_25km
-        print(f"    {(dist_km < 25).sum():,} cells within 25km of known slides")
+        shapes_list = [
+            (geom, 1) for geom in slides.geometry if geom is not None and not geom.is_empty
+        ]
+        if shapes_list:
+            slide_mask = rasterize(
+                shapes_list,
+                out_shape=(rows, cols),
+                transform=transform,
+                fill=0,
+                dtype="uint8",
+            )
+            dist_cells = distance_transform_edt(slide_mask == 0)
+            dist_km = dist_cells * COARSE_CELL_SIZE / 1000.0
+            within_25km = dist_km <= 25.0
+            valid_count += within_25km.astype(np.uint8)
+            print(f"    {within_25km.sum():,} cells within 25km of known slides")
+        else:
+            print("    No slide geometries to rasterize")
     else:
-        print("  ✗ all_slides_3338 not found (run 10_normalize first)")
+        print("    all_slides_3338.geojson not found")
 
-    # Layer 4: OSM data within 10km
+    # ------------------------------------------------------------------
+    # 4. osm_present_within_10km (exposure_3338.tif as proxy)
+    # ------------------------------------------------------------------
+    print("  [4/5] OSM data proximity (exposure proxy) ...")
     exposure_path = INTERMEDIATE / "exposure_3338.tif"
     if exposure_path.exists():
-        print("  Checking OSM exposure ...")
+        from scipy.ndimage import distance_transform_edt
+
         with rasterio.open(exposure_path) as src:
-            exp_data = src.read(1)
-            # Resample to 90m
-            exp_90m = np.zeros((rows, cols), dtype=np.float32)
+            exp_500m = np.zeros((rows, cols), dtype=np.float32)
             reproject(
-                source=exp_data,
-                destination=exp_90m,
+                source=rasterio.band(src, 1),
+                destination=exp_500m,
                 src_transform=src.transform,
                 src_crs=src.crs,
                 dst_transform=transform,
                 dst_crs=TARGET_CRS,
                 resampling=Resampling.bilinear,
             )
-        from scipy.ndimage import distance_transform_edt, uniform_filter
-
-        osm_mask = (exp_90m > 0).astype(np.float32)
-        # If any OSM feature within ~10km (111 cells at 90m)
-        smoothed = uniform_filter(osm_mask, size=111)
-        osm_nearby = (smoothed > 0.001).astype(np.float32)
-        layers += osm_nearby
-        print(f"    {osm_nearby.sum():,} cells with OSM data nearby")
+        osm_mask = exp_500m > 0
+        # Dilate: distance from any OSM feature
+        dist_cells = distance_transform_edt(~osm_mask)
+        dist_km = dist_cells * COARSE_CELL_SIZE / 1000.0
+        osm_nearby = dist_km <= 10.0
+        valid_count += osm_nearby.astype(np.uint8)
+        print(f"    {osm_nearby.sum():,} cells within 10km of OSM features")
     else:
-        print("  ✗ exposure_3338 not found (run 30_exposure first)")
+        print("    exposure_3338.tif not found")
 
-    # Layer 5: Coastline data present
-    # Use n10 as proxy — if n10 has data, coastline geometry is available
-    # (n10 was built from DEM + coastline datasets)
-    if n10_path.exists():
-        layers += n10_valid.astype(np.float32)
-        print(f"    Coastline proxy = n10 validity")
+    # ------------------------------------------------------------------
+    # 5. coastline_present: coastline_seak_3338.geojson buffered 50km
+    # ------------------------------------------------------------------
+    print("  [5/5] Coastline proximity ...")
+    coastline_path = INTERMEDIATE / "coastline_seak_3338.geojson"
+    if coastline_path.exists():
+        from scipy.ndimage import distance_transform_edt
 
-    # Normalize to 0.0 - 1.0
-    confidence = layers / 5.0
+        coast_gdf = gpd.read_file(coastline_path)
+        coast_shapes = [
+            (geom, 1) for geom in coast_gdf.geometry if geom is not None and not geom.is_empty
+        ]
+        if coast_shapes:
+            coast_mask = rasterize(
+                coast_shapes,
+                out_shape=(rows, cols),
+                transform=transform,
+                fill=0,
+                dtype="uint8",
+            )
+            dist_cells = distance_transform_edt(coast_mask == 0)
+            dist_km = dist_cells * COARSE_CELL_SIZE / 1000.0
+            coast_nearby = dist_km <= 50.0
+            valid_count += coast_nearby.astype(np.uint8)
+            print(f"    {coast_nearby.sum():,} cells within 50km of coastline")
+        else:
+            print("    No coastline geometries")
+    else:
+        print("    coastline_seak_3338.geojson not found — using n10 as fallback")
+        # Fallback: n10 validity as coastline proxy
+        if n10_valid.any():
+            valid_count += n10_valid.astype(np.uint8)
+            print(f"    Coastline proxy = n10 validity ({n10_valid.sum():,} cells)")
+        else:
+            print("    No coastline data available")
 
-    # Print summary
-    total = confidence.size
-    high = (confidence > 0.7).sum()
-    medium = ((confidence >= 0.4) & (confidence <= 0.7)).sum()
-    low = (confidence < 0.4).sum()
-    print(f"\n  Confidence summary:")
-    print(f"    High (>0.7):   {high / total * 100:.1f}% ({high:,} cells)")
-    print(f"    Medium (0.4-0.7): {medium / total * 100:.1f}% ({medium:,} cells)")
-    print(f"    Low (<0.4):    {low / total * 100:.1f}% ({low:,} cells)")
+    # ------------------------------------------------------------------
+    # Confidence = count / 5.0
+    # ------------------------------------------------------------------
+    confidence = valid_count.astype(np.float32) / 5.0
 
-    # Polygonize into 3 bands
-    print("\n  Polygonizing confidence bands ...")
-    band_map = np.zeros_like(confidence, dtype=np.uint8)
-    band_map[confidence > 0.7] = 3  # high
-    band_map[(confidence >= 0.4) & (confidence <= 0.7)] = 2  # medium
-    band_map[(confidence > 0) & (confidence < 0.4)] = 1  # low
+    total_cells = confidence.size
+    high_pct = (confidence > HIGH_MIN).sum() / total_cells * 100
+    med_pct = ((confidence >= LOW_MAX) & (confidence <= HIGH_MIN)).sum() / total_cells * 100
+    low_pct = (confidence < LOW_MAX).sum() / total_cells * 100
+    print(f"\n  Confidence bands:")
+    print(f"    High   (> {HIGH_MIN}): {high_pct:.1f}%")
+    print(f"    Medium ({LOW_MAX}–{HIGH_MIN}): {med_pct:.1f}%")
+    print(f"    Low    (< {LOW_MAX}):  {low_pct:.1f}%")
+
+    # ------------------------------------------------------------------
+    # Polygonise per band, dissolve, simplify, reproject to 4326
+    # ------------------------------------------------------------------
+    print("\n  Polygonising + dissolving ...")
+
+    band_map = np.zeros((rows, cols), dtype=np.uint8)
+    band_map[(confidence > 0) & (confidence < LOW_MAX)] = 1   # low
+    band_map[(confidence >= LOW_MAX) & (confidence <= HIGH_MIN)] = 2  # medium
+    # high (>0.7) = no overlay in frontend, but we emit it for completeness
+    band_map[confidence > HIGH_MIN] = 3  # high
+
+    band_labels = {1: "low", 2: "medium", 3: "high"}
+    band_min = {1: 0.0, 2: LOW_MAX, 3: HIGH_MIN}
 
     features = []
-    band_labels = {1: "low", 2: "medium", 3: "high"}
-    for geom, value in shapes(band_map, transform=transform):
-        if value == 0:
+    for band_val in [1, 2, 3]:
+        mask = band_map == band_val
+        if not mask.any():
+            print(f"    {band_labels[band_val]}: empty, skipped")
             continue
-        poly = shape(geom)
-        if not poly.is_empty:
-            # Simplify heavily — coarse overlay, not per-cell
-            simplified = poly.simplify(200)  # 200m
-            if not simplified.is_empty:
-                features.append({
-                    "type": "Feature",
-                    "geometry": simplified.__geo_interface__,
-                    "properties": {
-                        "confidence": band_labels.get(int(value), "unknown"),
-                        "value": float(value) / 3.0,  # normalized 0-1
-                    },
-                })
 
-    # Write GeoJSON
+        # Polygonise all cells in this band
+        band_polys = []
+        for geom, val in shapes(mask.astype(np.uint8), mask=mask, transform=transform):
+            if val == 0:
+                continue
+            poly = shape(geom)
+            if not poly.is_empty:
+                band_polys.append(poly)
+
+        if not band_polys:
+            continue
+
+        # Dissolve into one (or a few) big polygon(s)
+        dissolved = unary_union(band_polys)
+
+        # Simplify heavily — this is a coarse overlay
+        simplified = dissolved.simplify(SIMPLIFY_TOL)
+
+        if simplified.is_empty:
+            continue
+
+        features.append({
+            "type": "Feature",
+            "geometry": mapping(simplified),
+            "properties": {
+                "band": band_labels[band_val],
+                "confidence_min": band_min[band_val],
+            },
+        })
+        print(f"    {band_labels[band_val]}: dissolved → {len(features)} feature(s)")
+
+    # Reproject to EPSG:4326 for the frontend
+    print("  Reprojecting to EPSG:4326 ...")
+    from pyproj import Transformer
+    from shapely.ops import transform as shapely_transform
+
+    transformer = Transformer.from_crs(TARGET_CRS, "EPSG:4326", always_xy=True)
+
+    for feat in features:
+        geom_4326 = shapely_transform(transformer.transform, shape(feat["geometry"]))
+        feat["geometry"] = mapping(geom_4326)
+
     fc = {"type": "FeatureCollection", "features": features}
-    out_path = DATA_PROC / "confidence.geojson"
     out_path.write_text(json.dumps(fc))
-    print(f"  ✓ confidence.geojson: {len(features)} polygons")
 
-    # Honest reporting
-    known_limited = ["Lituya Bay", "Taan Fiord", "Icy Bay"]
+    size_kb = out_path.stat().st_size / 1024
+    print(f"  -> confidence.geojson: {len(features)} features, {size_kb:.0f} KB")
+
+    # ------------------------------------------------------------------
+    # Honest reporting — sample the 4 famous sites
+    # ------------------------------------------------------------------
+    print("\n  === HONEST REPORTING ===")
+
+    site_bands = []
+    for name, lon, lat in KNOWN_SITES:
+        # Convert lon/lat -> 3338 -> pixel coords
+        x3338, y3338 = Transformer.from_crs(
+            "EPSG:4326", TARGET_CRS, always_xy=True
+        ).transform(lon, lat)
+        col = int((x3338 - xmin) / COARSE_CELL_SIZE)
+        row = int((ymax - y3338) / COARSE_CELL_SIZE)
+        if 0 <= row < rows and 0 <= col < cols:
+            c = float(confidence[row, col])
+            b = band_labels.get(int(band_map[row, col]), "none")
+        else:
+            c = -1.0
+            b = "out_of_bounds"
+        site_bands.append((name, b, c))
+        print(f"    {name}: confidence={c:.2f}, band={b}")
+
+    limited_sites = [name for name, b, _ in site_bands if b in ("low", "medium")]
+    limited_str = ", ".join(limited_sites) if limited_sites else "none"
+
     print(
-        f"\n  Known sites in data-limited areas: "
-        f"{', '.join(known_limited)}"
-    )
-    print(
-        f"  '{low / total * 100:.0f}% of analysis area is data-limited. "
-        f"Recommendations in these areas are provisional.'"
+        f"\n  >> {high_pct:.0f}% high-confidence, {low_pct + med_pct:.0f}% data-limited. "
+        f"Known sites in data-limited areas: [{limited_str}]"
     )
     print("\n=== Done ===")
 
