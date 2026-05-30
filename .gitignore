@@ -30,6 +30,8 @@ data/raw/
 
 # Allow processed outputs (small enough to commit)
 !data/processed/
+# But not intermediate pipeline artifacts
+data/processed/intermediate/
 
 # Local config
 .env

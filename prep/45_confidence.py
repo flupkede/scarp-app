@@ -42,7 +42,8 @@ LOW_MAX = 0.4
 HIGH_MIN = 0.7
 
 # Geometry simplification tolerance (metres, in 3338)
-SIMPLIFY_TOL = 500
+# 5km for a coarse overlay — keeps file size small
+SIMPLIFY_TOL = 5000
 
 # Known sites for honest reporting (name, lon, lat)
 KNOWN_SITES = [
@@ -252,16 +253,26 @@ def main() -> None:
     band_labels = {1: "low", 2: "medium", 3: "high"}
     band_min = {1: 0.0, 2: LOW_MAX, 3: HIGH_MIN}
 
+    # Downsample band_map to 2km cells before polygonising — keeps vertices
+    # manageable.  The overlay is coarse by design; 2km resolution is plenty.
+    from scipy.ndimage import zoom as scipy_zoom
+    DECIMATE = 8  # 500m * 8 = 4000m cells
+    coarse_bands = scipy_zoom(band_map, 1.0 / DECIMATE, order=0).astype(np.uint8)
+    coarse_rows, coarse_cols = coarse_bands.shape
+
+    coarse_transform = from_bounds(xmin, ymin, xmax, ymax, coarse_cols, coarse_rows)
+    print(f"    Decimated to {coarse_cols}x{coarse_rows} grid ({DECIMATE * COARSE_CELL_SIZE // 1000}km cells)")
+
     features = []
     for band_val in [1, 2, 3]:
-        mask = band_map == band_val
+        mask = coarse_bands == band_val
         if not mask.any():
             print(f"    {band_labels[band_val]}: empty, skipped")
             continue
 
         # Polygonise all cells in this band
         band_polys = []
-        for geom, val in shapes(mask.astype(np.uint8), mask=mask, transform=transform):
+        for geom, val in shapes(mask.astype(np.uint8), mask=mask, transform=coarse_transform):
             if val == 0:
                 continue
             poly = shape(geom)
@@ -288,7 +299,7 @@ def main() -> None:
                 "confidence_min": band_min[band_val],
             },
         })
-        print(f"    {band_labels[band_val]}: dissolved → {len(features)} feature(s)")
+        print(f"    {band_labels[band_val]}: dissolved, {len(features)} feature(s)")
 
     # Reproject to EPSG:4326 for the frontend
     print("  Reprojecting to EPSG:4326 ...")
