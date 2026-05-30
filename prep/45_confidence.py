@@ -230,11 +230,41 @@ def main() -> None:
     # ------------------------------------------------------------------
     confidence = valid_count.astype(np.float32) / 5.0
 
-    total_cells = confidence.size
-    high_pct = (confidence > HIGH_MIN).sum() / total_cells * 100
-    med_pct = ((confidence >= LOW_MAX) & (confidence <= HIGH_MIN)).sum() / total_cells * 100
-    low_pct = (confidence < LOW_MAX).sum() / total_cells * 100
-    print(f"\n  Confidence bands:")
+    # ------------------------------------------------------------------
+    # LAND MASK — we only search for landslides on land / fjord walls,
+    # NOT in the open ocean.  Without this, low-data cells over the
+    # Bering Sea get a "low confidence" band and the hatch overlay ends
+    # up floating in open water (which is nonsensical — there is nothing
+    # to monitor there).  A cell is part of the study area only if it has
+    # terrain data: DEM coverage OR USGS susceptibility validity.  Open
+    # sea has neither.  The land mask is dilated by a few cells so the
+    # immediate fjord-coast zone is retained.
+    # ------------------------------------------------------------------
+    print("\n  Applying land mask (n10 terrain coverage) ...")
+    from scipy.ndimage import binary_dilation
+
+    # NOTE: dem_filled is unreliable as a land mask — reproject fills the
+    # whole destination grid so it reads ~100%.  The USGS n10 susceptibility
+    # raster, by contrast, only has valid values over actual Alaska terrain
+    # (~17% of the bounding box), so it is the honest "is this land?" signal.
+    land_mask = n10_valid
+    # Dilate ~5 cells (= 2.5 km at 500m) so the coastal fjord strip the
+    # sites actually sit on is kept, without bleeding far out to sea.
+    land_mask = binary_dilation(land_mask, iterations=5)
+    confidence[~land_mask] = -1.0  # sentinel: outside study area → no band
+    print(
+        f"    {land_mask.sum():,} land cells ({land_mask.mean() * 100:.1f}%); "
+        f"{(~land_mask).sum():,} sea/out-of-area cells masked out"
+    )
+
+    # Percentages reported over LAND cells only (the meaningful denominator)
+    land_cells = int(land_mask.sum()) or 1
+    high_pct = ((confidence > HIGH_MIN) & land_mask).sum() / land_cells * 100
+    med_pct = (
+        (confidence >= LOW_MAX) & (confidence <= HIGH_MIN) & land_mask
+    ).sum() / land_cells * 100
+    low_pct = ((confidence >= 0) & (confidence < LOW_MAX) & land_mask).sum() / land_cells * 100
+    print(f"\n  Confidence bands (over land only):")
     print(f"    High   (> {HIGH_MIN}): {high_pct:.1f}%")
     print(f"    Medium ({LOW_MAX}–{HIGH_MIN}): {med_pct:.1f}%")
     print(f"    Low    (< {LOW_MAX}):  {low_pct:.1f}%")
@@ -244,8 +274,10 @@ def main() -> None:
     # ------------------------------------------------------------------
     print("\n  Polygonising + dissolving ...")
 
+    # Sentinel-masked (sea / out-of-area) cells have confidence == -1.0 and
+    # therefore fall into NO band — the >= 0 guards below exclude them.
     band_map = np.zeros((rows, cols), dtype=np.uint8)
-    band_map[(confidence > 0) & (confidence < LOW_MAX)] = 1   # low
+    band_map[(confidence >= 0) & (confidence < LOW_MAX)] = 1   # low
     band_map[(confidence >= LOW_MAX) & (confidence <= HIGH_MIN)] = 2  # medium
     # high (>0.7) = no overlay in frontend, but we emit it for completeness
     band_map[confidence > HIGH_MIN] = 3  # high
