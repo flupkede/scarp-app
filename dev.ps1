@@ -1,19 +1,20 @@
 # SvelteKit 5 + FastAPI Dev Environment Script
-# Usage: .\dev.ps1 [start|stop|status|logs|restart]
-# Manages backend (uvicorn) and frontend (pnpm dev) with PID tracking and logs.
+# Usage: .\dev.ps1 [start|stop|status|logs|restart|deploy|deploy-fe|deploy-be]
+# Manages backend (uvicorn) and frontend (pnpm dev) with PID tracking and logs,
+# and deploys both to Azure (Static Web App + App Service) directly.
 #
 # Customize these variables for your project:
 
 param(
     [Parameter(Position = 0)]
-    [ValidateSet("start", "stop", "status", "logs", "restart")]
+    [ValidateSet("start", "stop", "status", "logs", "restart", "deploy", "deploy-fe", "deploy-be")]
     [string]$Action = "status",
 
     [Parameter(Mandatory = $false)]
-    [int]$BackendPort = 8000,
+    [int]$BackendPort = 11000,
 
     [Parameter(Mandatory = $false)]
-    [int]$FrontendPort = 5173,
+    [int]$FrontendPort = 11001,
 
     [Parameter(Mandatory = $false)]
     [string]$BackendDir = "backend",
@@ -21,6 +22,11 @@ param(
     [Parameter(Mandatory = $false)]
     [string]$FrontendDir = "frontend"
 )
+
+# --- Azure deploy targets ---
+$AzResourceGroup   = "scarp"
+$AzStaticWebApp    = "scarp-web"
+$AzAppService      = "scarp-api"
 
 $ErrorActionPreference = "Stop"
 
@@ -59,7 +65,7 @@ function Save-Pid {
 function Test-PortInUse {
     param([int]$Port)
     try {
-        $conn = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue
+        $conn = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
         return ($null -ne $conn -and $conn.Count -gt 0)
     } catch {
         return $false
@@ -315,14 +321,157 @@ function Show-Logs {
     Write-Label ""
 }
 
+# --- Deploy actions ---
+
+function Deploy-Frontend {
+    Write-Label "`nDeploying frontend to Azure Static Web Apps ($AzStaticWebApp)..." "Cyan"
+
+    $frontendDir = Join-Path $PSScriptRoot $FrontendDir
+    $buildDir = Join-Path $frontendDir "build"
+    $swaConfigSrc = Join-Path $PSScriptRoot "staticwebapp.config.json"
+
+    if (-not (Test-Path $frontendDir)) {
+        Write-Label "  Frontend dir not found: $frontendDir" "Red"
+        return $false
+    }
+
+    # 1. Build (PUBLIC_API_URL empty -> SWA proxies /api/* to linked backend)
+    Write-Label "  Building (pnpm build)..." "White"
+    $env:PUBLIC_API_URL = ""
+    Push-Location $frontendDir
+    try {
+        pnpm install --frozen-lockfile
+        if ($LASTEXITCODE -ne 0) { Write-Label "  pnpm install failed" "Red"; return $false }
+        pnpm build
+        if ($LASTEXITCODE -ne 0) { Write-Label "  pnpm build failed" "Red"; return $false }
+    } finally {
+        Pop-Location
+    }
+
+    if (-not (Test-Path $buildDir)) {
+        Write-Label "  Build output not found: $buildDir" "Red"
+        return $false
+    }
+
+    # 2. Stage SWA config into build output (navigationFallback + headers + CSP)
+    if (Test-Path $swaConfigSrc) {
+        Copy-Item $swaConfigSrc (Join-Path $buildDir "staticwebapp.config.json") -Force
+        Write-Label "  Staged staticwebapp.config.json into build/" "DarkGray"
+    }
+
+    # 3. Fetch deployment token from Azure (keeps secret out of the repo)
+    Write-Label "  Fetching SWA deployment token..." "White"
+    $token = (& az staticwebapp secrets list `
+        --name $AzStaticWebApp `
+        --resource-group $AzResourceGroup `
+        --query "properties.apiKey" -o tsv)
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($token)) {
+        Write-Label "  Could not retrieve SWA deployment token (is 'az' logged in?)" "Red"
+        return $false
+    }
+
+    # 4. Deploy pre-built output via the SWA CLI (no global install needed)
+    Write-Label "  Uploading to Static Web App..." "White"
+    & npx -y "@azure/static-web-apps-cli" deploy $buildDir `
+        --deployment-token $token `
+        --env production
+    if ($LASTEXITCODE -ne 0) {
+        Write-Label "  SWA deploy failed" "Red"
+        return $false
+    }
+
+    Write-Label "  Frontend deployed." "Green"
+    return $true
+}
+
+function Deploy-Backend {
+    Write-Label "`nDeploying backend to Azure App Service ($AzAppService)..." "Cyan"
+
+    $backendDir = Join-Path $PSScriptRoot $BackendDir
+    $dataDir = Join-Path $PSScriptRoot "data\processed"
+    $stageDir = Join-Path $LogDir "deploy_pkg"
+    $zipPath = Join-Path $LogDir "backend-deploy.zip"
+
+    if (-not (Test-Path (Join-Path $backendDir "src\scarp"))) {
+        Write-Label "  Backend package not found under $backendDir\src\scarp" "Red"
+        return $false
+    }
+
+    # 1. Clean staging dir
+    if (Test-Path $stageDir) { Remove-Item $stageDir -Recurse -Force }
+    New-Item -ItemType Directory -Path $stageDir -Force | Out-Null
+
+    # 2. Pre-install deps flat into the package (WEBSITE_RUN_FROM_PACKAGE=1
+    #    mounts the zip as-is; no server-side pip install runs). Install from
+    #    backend/pyproject.toml so the dependency list never drifts from the
+    #    declared deps (slowapi, gunicorn, etc.).
+    Write-Label "  Installing dependencies into package..." "White"
+    $pipArgs = @(
+        "install", "--target", $stageDir, "--no-cache-dir", $backendDir
+    )
+    & pip @pipArgs
+    if ($LASTEXITCODE -ne 0) { Write-Label "  pip install failed" "Red"; return $false }
+
+    # 3. Copy app source + processed data into the package
+    Copy-Item (Join-Path $backendDir "src\scarp") (Join-Path $stageDir "scarp") -Recurse -Force
+    if (Test-Path $dataDir) {
+        $dataDest = Join-Path $stageDir "data\processed"
+        New-Item -ItemType Directory -Path $dataDest -Force | Out-Null
+        Copy-Item (Join-Path $dataDir "*") $dataDest -Recurse -Force
+    }
+
+    # 4. Zip the package
+    Write-Label "  Building deployment zip..." "White"
+    if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+    Compress-Archive -Path (Join-Path $stageDir "*") -DestinationPath $zipPath -Force
+    $sizeMb = [math]::Round((Get-Item $zipPath).Length / 1MB, 1)
+    Write-Label "  Package size: $sizeMb MB" "DarkGray"
+
+    # 5. Deploy via az webapp deploy (zip, run-from-package)
+    Write-Label "  Uploading to App Service..." "White"
+    $deployArgs = @(
+        "webapp", "deploy",
+        "--resource-group", $AzResourceGroup,
+        "--name", $AzAppService,
+        "--src-path", $zipPath,
+        "--type", "zip",
+        "--async", "false"
+    )
+    & az @deployArgs
+    if ($LASTEXITCODE -ne 0) { Write-Label "  App Service deploy failed" "Red"; return $false }
+
+    Write-Label "  Backend deployed." "Green"
+    return $true
+}
+
+function Invoke-Deploy {
+    param([switch]$FrontendOnly, [switch]$BackendOnly)
+
+    $ok = $true
+    if (-not $BackendOnly)  { if (-not (Deploy-Frontend)) { $ok = $false } }
+    if (-not $FrontendOnly) { if (-not (Deploy-Backend))  { $ok = $false } }
+
+    Write-Label ""
+    if ($ok) {
+        Write-Label "  Deploy complete." "Green"
+        Write-Label "  Live: https://scarp.dsoft.services" "White"
+    } else {
+        Write-Label "  Deploy finished with errors (see above)." "Red"
+    }
+    Write-Label ""
+}
+
 # --- Main ---
 
 switch ($Action) {
-    "start"   { Start-Services }
-    "stop"    { Stop-Services }
-    "status"  { Show-Status }
-    "logs"    { Show-Logs }
-    "restart" { Stop-Services; Start-Sleep -Seconds 2; Start-Services }
+    "start"     { Start-Services }
+    "stop"      { Stop-Services }
+    "status"    { Show-Status }
+    "logs"      { Show-Logs }
+    "restart"   { Stop-Services; Start-Sleep -Seconds 2; Start-Services }
+    "deploy"    { Invoke-Deploy }
+    "deploy-fe" { Invoke-Deploy -FrontendOnly }
+    "deploy-be" { Invoke-Deploy -BackendOnly }
 }
 
 Write-Host ""

@@ -90,9 +90,9 @@ jobs:
           # Pre-install all deps + the scarp package into the zip root.
           # WEBSITE_RUN_FROM_PACKAGE=1 mounts this zip as-is; no server-side
           # pip install happens, so everything must be bundled here.
-          pip install --target deploy_pkg --no-cache-dir \
-            fastapi "uvicorn[standard]" gunicorn shapely httpx \
-            "openai>=1.50" pydantic pydantic-settings python-multipart
+          # Install from backend/pyproject.toml so the dependency list never
+          # drifts from the declared deps (slowapi, gunicorn, etc.).
+          pip install --target deploy_pkg --no-cache-dir ./backend
 
           # Copy the scarp package source alongside the installed deps.
           cp -r backend/src/scarp deploy_pkg/scarp
