@@ -45,6 +45,12 @@ jobs:
           PUBLIC_API_URL: ""  # SWA proxies /api/* to the linked backend
         run: pnpm build
 
+      - name: Stage SWA config into build output
+        # With skip_app_build + app_location=frontend/build, SWA reads
+        # staticwebapp.config.json from the build root. Copy it in so
+        # navigationFallback (SPA deep-links) and headers take effect.
+        run: cp staticwebapp.config.json frontend/build/staticwebapp.config.json
+
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
         with:
