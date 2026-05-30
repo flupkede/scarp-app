@@ -246,44 +246,20 @@
 				}
 			});
 
-			// 6. Top 10 — larger white/black target symbols with pulse ring
-			m.addLayer({
-				id: 'top10-ring',
-				type: 'circle',
-				source: 'top10',
-				paint: {
-					'circle-radius': 10,
-					'circle-color': '#ffffff',
-					'circle-stroke-color': '#1c1917',
-					'circle-stroke-width': 2
-				}
-			});
-
-			// 6b. Top 10 — middle ring
-			m.addLayer({
-				id: 'top10-mid',
-				type: 'circle',
-				source: 'top10',
-				paint: {
-					'circle-radius': 6,
-					'circle-color': '#ffffff',
-					'circle-stroke-color': '#1c1917',
-					'circle-stroke-width': 1.5
-				}
-			});
-
-			// 6c. Top 10 — center dot
+			// 6. Top 10 — simple red dot
 			m.addLayer({
 				id: 'top10-dot',
 				type: 'circle',
 				source: 'top10',
 				paint: {
-					'circle-radius': 3,
-					'circle-color': '#1c1917'
+					'circle-radius': 7,
+					'circle-color': '#dc2626',
+					'circle-stroke-color': '#ffffff',
+					'circle-stroke-width': 1.5
 				}
 			});
 
-			// 6d. Top 10 — pulsing outer glow
+			// 6b. Top 10 — pulsing outer glow
 			m.addLayer({
 				id: 'top10-pulse',
 				type: 'circle',
@@ -316,7 +292,7 @@
 
 			// --- Interactions ---
 
-			const candidateLayers = ['candidates-target', 'candidates-dot', 'top10-ring', 'top10-mid', 'top10-dot'];
+			const candidateLayers = ['candidates-target', 'candidates-dot', 'top10-dot'];
 			for (const layerId of candidateLayers) {
 				m.on('click', layerId, (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
 					if (e.features && e.features.length > 0) {
@@ -399,10 +375,8 @@
 			<span>Recommended site</span>
 		</div>
 		<div class="flex items-center gap-2 mb-1">
-			<span class="inline-block w-4 h-4 rounded-full border-2 border-ink bg-white flex-shrink-0 relative">
-				<span class="absolute inset-1 bg-ink rounded-full"></span>
-			</span>
-			<span class="text-[10px] text-red-600 font-semibold">● pulse = top 10 urgent</span>
+			<span class="inline-block w-4 h-4 rounded-full bg-red-600 border border-white flex-shrink-0"></span>
+			<span>Top 10 urgent</span>
 		</div>
 		<div class="flex items-center gap-2 mb-3">
 			<span class="inline-block w-3 h-3 rounded-full bg-blue-500 border border-white flex-shrink-0"></span>
