@@ -81,13 +81,14 @@ jobs:
         run: |
           mkdir -p deploy_pkg
 
-          # Export deps without the editable-install line (-e .) so Oryx
-          # can run plain pip install without needing the source tree first.
-          cd backend && uv export --no-hashes --format requirements-txt \
-            | grep -v "^-e " > ../deploy_pkg/requirements.txt && cd ..
+          # Pre-install all deps + the scarp package into the zip root.
+          # WEBSITE_RUN_FROM_PACKAGE=1 mounts this zip as-is; no server-side
+          # pip install happens, so everything must be bundled here.
+          pip install --target deploy_pkg --no-cache-dir \
+            fastapi "uvicorn[standard]" gunicorn shapely httpx \
+            "openai>=1.50" pydantic pydantic-settings python-multipart
 
-          # Copy the scarp package to the deploy root so gunicorn can find
-          # scarp.api.main:app without any PYTHONPATH tricks.
+          # Copy the scarp package source alongside the installed deps.
           cp -r backend/src/scarp deploy_pkg/scarp
 
           # Include processed GeoJSON data — backend reads these at runtime.
