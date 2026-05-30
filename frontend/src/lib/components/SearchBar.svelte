@@ -30,9 +30,19 @@
 			<button
 				type="submit"
 				disabled={loading || !query.trim()}
-				class="absolute right-1 top-1 bottom-1 px-3 rounded-md bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed"
+				class="absolute right-1 top-1 bottom-1 px-2.5 rounded-md bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
+				aria-label="Search"
 			>
-				{loading ? '...' : 'Search'}
+				{#if loading}
+					<svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+						<path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+					</svg>
+				{:else}
+					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+						<circle cx="11" cy="11" r="7"/>
+						<line x1="16.5" y1="16.5" x2="22" y2="22"/>
+					</svg>
+				{/if}
 			</button>
 		</div>
 	</form>
