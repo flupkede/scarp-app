@@ -240,9 +240,20 @@ async def search_zones(request: Request, body: SearchRequest) -> dict[str, Any]:
             args, explanation = _call_openai_compat(body.query)
 
         filtered = _apply_filters(features, args)
-        explanation = explanation or (
-            f"Filtered by: {json.dumps(args)}. Showing {len(filtered)} sites."
-        )
+        if not explanation:
+            parts: list[str] = []
+            if args.get("max_rank"):
+                parts.append(f"top {args['max_rank']} by risk")
+            if args.get("min_exposure"):
+                parts.append("high exposure to people and marine traffic")
+            if args.get("min_susceptibility"):
+                parts.append("high geological susceptibility")
+            if args.get("near_lat") is not None:
+                parts.append("near the specified location")
+            if args.get("min_score"):
+                parts.append(f"score ≥ {args['min_score']:.0%}")
+            desc = ", ".join(parts) if parts else "your criteria"
+            explanation = f"Showing {len(filtered)} sites filtered by {desc}."
 
         return {
             "type": "FeatureCollection",
