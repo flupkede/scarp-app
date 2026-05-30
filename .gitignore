@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 .venv/
+# uv-exported lockfile artifact — deploys install from pyproject.toml instead
+backend/requirements.txt
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/

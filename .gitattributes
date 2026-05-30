@@ -1,0 +1,27 @@
+# Normalize line endings so diffs stay clean across Windows/Linux.
+# Default: let Git auto-detect text and normalize to LF in the repo.
+* text=auto
+
+# PowerShell scripts must stay CRLF (Windows / pwsh).
+*.ps1 text eol=crlf
+
+# Cross-platform text formats stay LF (run in CI / containers on Linux).
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.sh   text eol=lf
+*.py   text eol=lf
+*.ts   text eol=lf
+*.js   text eol=lf
+*.svelte text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+
+# Binary assets — never normalize.
+*.jpg  binary
+*.jpeg binary
+*.png  binary
+*.gif  binary
+*.webp binary
+*.tif  binary
+*.tiff binary
+*.geojson -text

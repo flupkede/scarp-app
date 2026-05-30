@@ -107,11 +107,31 @@ jobs:
 
       - name: Deploy to App Service
         run: |
+          # --async true uploads the zip and returns immediately (fast CI),
+          # but on its own it would report success even if the container then
+          # crash-loops. The health-gate below restores failure detection.
           az webapp deploy \
             --resource-group scarp \
             --name scarp-api \
             --src-path backend-deploy.zip \
             --type zip \
             --async true
-          echo "Deployment triggered. Container will warm up in ~60s."
-          echo "Live: https://scarp.dsoft.services"
+          echo "Deployment triggered. Container is warming up..."
+
+      - name: Wait for backend to become healthy
+        run: |
+          # Poll the public health endpoint until the container is up (max ~2m).
+          # Fails the job if the new build never becomes healthy, so a broken
+          # deploy (e.g. a missing dependency) cannot be reported as success.
+          url="https://scarp.dsoft.services/api/health"
+          for i in $(seq 1 18); do
+            if curl -fsS --max-time 10 "$url" > /dev/null; then
+              echo "Backend healthy after $((i*10))s."
+              echo "Live: https://scarp.dsoft.services"
+              exit 0
+            fi
+            echo "  not ready yet (attempt $i/18)..."
+            sleep 10
+          done
+          echo "Backend did not become healthy within ~3 minutes." >&2
+          exit 1
