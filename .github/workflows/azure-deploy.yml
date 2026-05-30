@@ -10,6 +10,10 @@ concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   # ── Job 1: Build SvelteKit static site → Azure Static Web App ───────────────
   deploy-frontend:
@@ -49,6 +53,7 @@ jobs:
           action: upload
           app_location: frontend
           output_location: build
+          skip_app_build: true   # use pre-built pnpm output; skip Oryx npm rebuild
           skip_api_build: true
 
   # ── Job 2: Deploy FastAPI backend → Azure App Service ────────────────────────
@@ -59,6 +64,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Azure login (service principal)
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Setup Python 3.12
         uses: actions/setup-python@v5
         with:
@@ -67,25 +77,31 @@ jobs:
       - name: Install uv
         run: pip install uv
 
-      - name: Install backend dependencies
-        working-directory: backend
-        run: uv sync --no-dev
-
       - name: Package backend for deployment
-        working-directory: backend
         run: |
-          # Install project + all deps (single-sourced from pyproject.toml) into a flat
-          # layout that App Service Oryx can pick up. No manual dep list to drift.
-          uv pip install --target ./deploy_pkg .
-          # Include processed GeoJSON data — backend reads these at runtime.
-          cp -r ../data/processed ./deploy_pkg/data/
+          mkdir -p deploy_pkg
 
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: scarp-api
-          publish-profile: ${{ secrets.AZURE_APP_SERVICE_PUBLISH_PROFILE }}
-          package: backend/deploy_pkg
-          # startup-command is NOT a supported input on webapps-deploy@v3.
-          # Startup is set out-of-band via: az webapp config set --startup-file
-          # See docs/DEPLOY.md step 6 for the az CLI command.
+          # Export deps without the editable-install line (-e .) so Oryx
+          # can run plain pip install without needing the source tree first.
+          cd backend && uv export --no-hashes --format requirements-txt \
+            | grep -v "^-e " > ../deploy_pkg/requirements.txt && cd ..
+
+          # Copy the scarp package to the deploy root so gunicorn can find
+          # scarp.api.main:app without any PYTHONPATH tricks.
+          cp -r backend/src/scarp deploy_pkg/scarp
+
+          # Include processed GeoJSON data — backend reads these at runtime.
+          mkdir -p deploy_pkg/data
+          cp -r data/processed deploy_pkg/data/
+
+          cd deploy_pkg && zip -r ../backend-deploy.zip . && cd ..
+          echo "Package size: $(du -sh backend-deploy.zip)"
+
+      - name: Deploy to App Service
+        run: |
+          az webapp deploy \
+            --resource-group scarp \
+            --name scarp-api \
+            --src-path backend-deploy.zip \
+            --type zip \
+            --async false
