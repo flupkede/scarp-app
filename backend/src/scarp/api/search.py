@@ -15,6 +15,7 @@ from fastapi import APIRouter, Request
 
 from ..config import settings
 from ..geo import haversine_km
+from .ratelimit import limiter
 from .schemas import SearchRequest, SearchResponse
 
 logger = logging.getLogger("scarp.search")
@@ -215,6 +216,7 @@ def _call_anthropic(query: str) -> tuple[dict, str]:
 
 
 @router.post("/search", response_model=SearchResponse)
+@limiter.limit("10/minute")
 async def search_zones(request: Request, body: SearchRequest) -> dict[str, Any]:
     """
     Natural-language search for zones.

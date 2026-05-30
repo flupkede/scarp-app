@@ -502,4 +502,24 @@ Types: `feat`, `fix`, `refactor`, `docs`, `chore`, `data`
 
 ---
 
+## 17. Local dev — MANDATORY
+
+**NEVER start uvicorn or pnpm dev directly from bash.** Always use `dev.ps1`:
+
+```powershell
+# from C:\WorkArea\AI\scarp\
+.\dev.ps1 start    # starts backend :8000 + frontend :5173 (background, non-blocking)
+.\dev.ps1 stop     # stops both cleanly
+.\dev.ps1 status   # health check + PID info
+.\dev.ps1 logs     # last 20 lines from backend/frontend logs
+.\dev.ps1 restart  # stop + start
+```
+
+- `start` / `stop` are idempotent — safe to run if already running/stopped.
+- Logs land in `.dev-logs/backend.log` and `.dev-logs/frontend.log`.
+- From bash (inside OpenCode), invoke as: `pwsh -NonInteractive -Command "Set-Location 'C:\WorkArea\AI\scarp'; .\dev.ps1 <action>"`
+- **Why:** direct `uvicorn &` leaves orphan processes; `dev.ps1` tracks PIDs and can clean them up.
+
+---
+
 *See git log for revision history.*

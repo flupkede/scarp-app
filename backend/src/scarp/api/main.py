@@ -10,9 +10,13 @@ from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from ..config import CORS_ORIGINS, llm_provider_label, settings
 from .layers import router as layers_router
+from .ratelimit import limiter
 from .search import router as search_router
 from .zones import router as zones_router
 
@@ -79,6 +83,19 @@ app = FastAPI(
     description="Prioritization data for landslide monitoring placement in Alaska.",
     lifespan=lifespan,
 )
+
+# Rate-limiting — attach limiter to app.state so SlowAPI can find it
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+
+
+@app.exception_handler(RateLimitExceeded)
+async def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        content={"detail": f"Rate limit exceeded: {exc.detail}. Try again in a minute."},
+    )
+
 
 # CORS — strict allowlist, never "*"
 app.add_middleware(
