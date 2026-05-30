@@ -100,6 +100,16 @@
 
 		m.addControl(new maplibregl.NavigationControl(), 'top-right');
 
+		// Surface any MapLibre error to the console (blank-map diagnostics)
+		m.on('error', (e: { error?: Error }) => {
+			console.error('[MapLibre error]', e?.error?.message ?? e);
+		});
+
+		// Ensure the map sizes correctly once the flex layout has settled
+		m.on('load', () => {
+			requestAnimationFrame(() => m.resize());
+		});
+
 		m.on('load', () => {
 			// --- Diagonal hatch pattern for confidence layer ---
 			m.addImage('diagonal-hatch', makeDiagonalHatch());
