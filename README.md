@@ -60,6 +60,22 @@ Scoring: a weighted-additive formula (no signal zeros out others) → local-maxi
 
 The natural-language search (`POST /api/search`) routes your query through an LLM (GLM 4.7 Flash via DeepInfra) which calls a `filter_zones` tool and returns a filtered subset with an explanation.
 
+### How the search actually works (the LLM never touches the data)
+
+The search is a deliberate split: **the LLM translates free text into filter parameters; plain, deterministic Python does the actual filtering.** Step by step:
+
+1. You type a question in the search bar — e.g. *"show the top 10 most exposed unmonitored sites near Whittier."*
+2. The frontend sends that text to `POST /api/search`.
+3. The backend calls the LLM (GLM 4.7 Flash via DeepInfra by default, OpenAI-compatible) with three things: a system prompt describing what a "site" is and which properties exist (rank, score, susceptibility, exposure, coverage, coordinates…); your query, truncated to 500 characters; and one tool definition, `filter_zones`.
+4. The LLM does **not** choose which sites — it chooses which *filter values*. It returns structured JSON such as `{ "min_exposure": 0.6, "near_lat": 60.77, "near_lon": -148.68, "max_distance_km": 30, "top_n": 10 }`, plus a one-line plain-English explanation ("I filtered for high-exposure sites near Whittier").
+5. The backend — **not** the LLM — does the real work. `_apply_filters` applies those parameters in pure Python to the ~120 sites: thresholds on score / rank / exposure / susceptibility, and a geographic distance filter via `haversine_km`. Then it sorts by rank and truncates to `top_n`.
+6. The result is a GeoJSON FeatureCollection of the filtered sites plus the LLM's explanation, returned to the frontend and drawn on the map.
+
+Why this design matters:
+- **The LLM never sees the 120 sites — only the schema** (which fields exist). That keeps the prompt tiny, the cost low, and the filtering fully deterministic and explainable. You can always see exactly why a site was included.
+- **Provider-agnostic.** Two code paths — OpenAI-compatible (DeepInfra/GLM, the default) or Anthropic (Claude) — are selected automatically from `LLM_BASE_URL`. Same tool, different SDK schema; no vendor lock-in.
+- **It never fails hard.** No API key, search disabled, or any error → a graceful fallback returns the top 15 sites by rank with a note explaining why the LLM step was skipped. The map always responds.
+
 ### Architecture
 
 ```mermaid
@@ -118,7 +134,7 @@ Scarp's scoring model went through five rejected approaches before it worked. Ea
 
 - **Barry Arm — the most famous site — ranks low, on purpose.** It triggered the National Landslide Preparedness Act, but it already has a sensor 1.3 km away. The model correctly deprioritizes it: Scarp finds places that are dangerous *and* unwatched, not places we already monitor. That distinction is the whole point.
 
-We also document where the model is blind: Lituya Bay and Taan Fiord have no public elevation data. Their absence from the rankings isn't "low risk" — it's "no data," shown explicitly as a confidence layer.
+We also document where the model is blind — not at the famous sites, but in the gaps between them. A data-confidence layer shows where the public inputs are thin: roughly three-quarters of the region's land area. The well-known fjords are well-covered; the unstudied slopes between them are not. A low score in a grey zone means "we can't see clearly here," not "low risk." Showing that gap honestly is itself a finding — it's exactly what the Walden 2025 and Patton 2023 papers argue is missing.
 
 ---
 
@@ -193,7 +209,7 @@ uv run python 50_score_zones.py
 ## Honest limitations
 
 - **Not a validated hazard model.** Weights are defensible, not authoritative. This is a first-order triage tool, not a substitute for on-the-ground geological assessment.
-- **Lituya Bay and Taan Fiord are blind spots.** Public elevation data does not cover these fjords. Their absence from the rankings means "no data," not "low risk."
+- **Most of the region is data-limited.** Roughly three-quarters of the Southeast Alaska land area lacks the full set of public inputs the scoring relies on (shown as the grey "data-confidence" overlay). The famous, well-studied sites — Lituya Bay, Taan Fiord, Tracy Arm — are the well-covered exceptions; the unstudied slopes between them are where the public record runs thin. A low or absent score in those grey zones means "not enough data to judge," not "low risk."
 - **Exposure is coarse.** OSM building/road density is a proxy; actual population at risk requires census data not used here.
 - **Coverage mask is sparse.** AEC seismic stations detect earthquakes, not slope deformation directly. Purpose-built tiltmeters and GPS would give a better coverage picture.
 - **Southeast Alaska only.** The DGGS inventory covers more of Alaska but processing was scoped to the highest-risk fjord region.

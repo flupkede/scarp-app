@@ -3,9 +3,17 @@
 
 	let visible = $state(true);
 	let fadeOut = $state(false);
-	const reducedMotion = typeof window !== 'undefined' ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false;
+	const reducedMotion =
+		typeof window !== 'undefined'
+			? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+			: false;
+
+	// Fade timing — fast in/out so the map reveals quickly.
+	const FADE_OUT_MS = 400; // whole overlay (photo + text) fades out together
+	const HOLD_MS = 2600; // reading time before auto-dismiss begins
 
 	function dismiss() {
+		if (fadeOut) return; // already dismissing
 		if (reducedMotion) {
 			visible = false;
 			onDismiss();
@@ -14,23 +22,32 @@
 			setTimeout(() => {
 				visible = false;
 				onDismiss();
-			}, 1000);
+			}, FADE_OUT_MS);
 		}
 	}
 
-	// Auto-dismiss after 3s
-	setTimeout(dismiss, 3000);
+	// Auto-dismiss after the hold window.
+	setTimeout(dismiss, HOLD_MS);
 </script>
 
 {#if visible}
+	<!--
+		The ENTIRE overlay (background photo + gradient + content) fades in and out
+		as one layer via `.splash-root`, so the map underneath is revealed in a
+		smooth crossfade instead of the photo cutting away abruptly.
+	-->
 	<div
-		class="fixed inset-0 z-50 flex items-end justify-center pb-24 sm:pb-32"
+		class="splash-root fixed inset-0 z-50 flex items-end justify-center pb-24 sm:pb-32 {reducedMotion
+			? ''
+			: fadeOut
+				? 'splash-out'
+				: 'splash-in'}"
 		onclick={dismiss}
 		onkeydown={(e) => e.key === 'Escape' && dismiss()}
 		role="button"
 		tabindex="0"
 	>
-		<!-- Background image placeholder — uses USGS Tracy Arm aerial if available -->
+		<!-- Background image — USGS Tracy Arm aerial -->
 		<div
 			class="absolute inset-0 bg-cover bg-center"
 			style="background-image: url('/splash-tracy-arm.jpg'); background-color: #1c1917;"
@@ -40,13 +57,7 @@
 		</div>
 
 		<!-- Content -->
-		<div
-			class="relative z-10 text-center px-6 max-w-2xl transition-all duration-1000 {fadeOut
-				? 'opacity-0 translate-y-4'
-				: reducedMotion
-					? 'opacity-100'
-					: 'animate-fade-in'}"
-		>
+		<div class="relative z-10 text-center px-6 max-w-2xl">
 			<h1 class="text-5xl sm:text-6xl font-serif font-extrabold text-white mb-6 tracking-wide">
 				SCARP
 			</h1>
@@ -68,17 +79,36 @@
 {/if}
 
 <style>
-	:global(.animate-fade-in) {
-		animation: fadeIn 0.5s ease-out;
+	/* Whole-overlay crossfade. The photo and text fade together so the map
+	   beneath is revealed smoothly. Fast timings for a snappy reveal. */
+	.splash-root {
+		will-change: opacity;
 	}
-	@keyframes fadeIn {
+
+	.splash-in {
+		animation: splashIn 0.35s ease-out both;
+	}
+
+	.splash-out {
+		animation: splashOut 0.4s ease-in both;
+		pointer-events: none;
+	}
+
+	@keyframes splashIn {
 		from {
 			opacity: 0;
-			transform: translateY(8px);
 		}
 		to {
 			opacity: 1;
-			transform: translateY(0);
+		}
+	}
+
+	@keyframes splashOut {
+		from {
+			opacity: 1;
+		}
+		to {
+			opacity: 0;
 		}
 	}
 </style>

@@ -29,16 +29,33 @@ logger = logging.getLogger("scarp")
 
 
 def _resolve_data_dir() -> Path:
-    """Resolve data directory, falling back to a relative path if needed."""
-    p = settings.data_dir
-    if p.is_dir():
-        return p
-    # Try relative to backend/
-    backend_dir = Path(__file__).resolve().parent.parent.parent.parent
-    fallback = backend_dir.parent / "data" / "processed"
-    if fallback.is_dir():
-        return fallback
-    raise FileNotFoundError(f"Data directory not found: tried {p} and {fallback}")
+    """Resolve data directory, searching several candidate locations.
+
+    Production note: on Azure App Service the Oryx build compresses the output
+    and extracts it to a random ``/tmp/<id>`` dir at runtime, so a hardcoded
+    ``DATA_DIR`` pointing at ``/home/site/wwwroot/data/processed`` does not
+    exist. We therefore probe multiple locations relative to this module and
+    the current working directory before giving up.
+    """
+    here = Path(__file__).resolve()  # .../<root>/scarp/api/main.py
+    package_root = here.parent.parent.parent  # extraction/source root holding scarp/
+
+    candidates = [
+        settings.data_dir,  # explicit DATA_DIR env override
+        package_root / "data" / "processed",  # data shipped next to scarp/ (prod zip)
+        here.parent.parent.parent.parent.parent / "data" / "processed",  # repo layout
+        Path.cwd() / "data" / "processed",  # cwd-relative
+    ]
+
+    tried: list[str] = []
+    for cand in candidates:
+        tried.append(str(cand))
+        if cand.is_dir() and (cand / "zones.geojson").is_file():
+            return cand
+
+    raise FileNotFoundError(
+        "Data directory not found. Tried: " + ", ".join(tried)
+    )
 
 
 @asynccontextmanager

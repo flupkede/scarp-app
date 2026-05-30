@@ -76,6 +76,14 @@
 	});
 </script>
 
+<!-- Back to map — fixed top-left -->
+<a href="/" class="back-btn" aria-label="Back to map">
+	<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+		<path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+	</svg>
+	Map
+</a>
+
 <!-- Progress dots — fixed right edge -->
 <nav class="progress-dots" aria-label="Story navigation">
 	{#each Array(TOTAL_SLIDES) as _, i}
@@ -114,7 +122,7 @@
 				<div class="cover-badge">August 2025 · Tracy Arm, Alaska</div>
 				<blockquote class="cover-quote">
 					In 1958, Lituya Bay saw the highest wave ever recorded&thinsp;—&thinsp;524&nbsp;m.
-					In August 2025, Tracy Arm came within 50&nbsp;m of that record.
+					In August 2025, Tracy Arm made the second-highest ever&thinsp;—&thinsp;481&nbsp;m.
 					<em>Nobody saw it coming.</em>
 				</blockquote>
 				<a href="#slide-1" onclick={(e) => { e.preventDefault(); scrollToSlide(1); }} class="scroll-hint">
@@ -143,7 +151,7 @@
 
 		<div class="slide-inner" style="position:relative;z-index:1;">
 			<h2 class="slide-heading slide-heading--light">Before &amp; After</h2>
-			<p class="slide-subhead slide-subhead--light">Tracy Arm Fjord · June 2025 vs. September 2025</p>
+			<p class="slide-subhead slide-subhead--light">Tracy Arm Fjord · 26 July 2025 vs. 19 August 2025</p>
 
 			<!-- Before/After drag slider -->
 			<div
@@ -162,14 +170,14 @@
 					if (e.key === 'ArrowRight') sliderPos = Math.min(100, sliderPos + 2);
 				}}
 			>
-				<!-- AFTER image (full width, bottom layer) -->
-				<img class="ba-img ba-img--after" src="/splash-tracy-arm.jpg" alt="After: Tracy Arm September 2025 — post-landslide" draggable="false" />
-				<span class="ba-label ba-label--right">After · Sept 2025</span>
+				<!-- AFTER image: NASA Landsat 19 Aug 2025 — post-landslide (brown scar visible) -->
+				<img class="ba-img ba-img--after" src="/tracy-arm-after.jpg" alt="After: Tracy Arm 19 August 2025 — landslide scar and stripped forest visible" draggable="false" />
+				<span class="ba-label ba-label--right">After · 19 Aug 2025</span>
 
-				<!-- BEFORE image (clipped via clip-path to left of handle) -->
-				<img class="ba-img ba-img--before" src="/splash-tracy-arm.jpg" alt="Before: Tracy Arm June 2025 — intact forest" draggable="false"
-					style="clip-path: inset(0 {100 - sliderPos}% 0 0); filter: sepia(0.45) hue-rotate(15deg) saturate(1.4) brightness(1.05);" />
-				<span class="ba-label ba-label--left" style="opacity: {sliderPos > 12 ? 1 : 0}">Before · June 2025</span>
+				<!-- BEFORE image: NASA Landsat 26 Jul 2025 — intact green forest -->
+				<img class="ba-img ba-img--before" src="/tracy-arm-before.jpg" alt="Before: Tracy Arm 26 July 2025 — intact green forest on fjord wall" draggable="false"
+					style="clip-path: inset(0 {100 - sliderPos}% 0 0);" />
+				<span class="ba-label ba-label--left" style="opacity: {sliderPos > 12 ? 1 : 0}">Before · 26 Jul 2025</span>
 
 				<!-- Divider handle -->
 				<div class="ba-handle" style="left:{sliderPos}%">
@@ -246,21 +254,21 @@
 			<div class="quotes-grid">
 				<figure class="science-quote">
 					<blockquote>
-						"The frequency of large rock-slope failures in deglaciating fjords of southeast Alaska has increased approximately tenfold since 2010, consistent with accelerated permafrost degradation and loss of glacial buttressing."
+						Examined eight large rock-slope failures in deglaciating southern Alaska; six accelerated as the supporting glacier retreated. The authors call for "broader and more systematic paraglacial hazard monitoring in a warming world."
 					</blockquote>
-					<figcaption>Walden et al., <em>Nature Geoscience</em>, 2025</figcaption>
+					<figcaption>Walden et al., <em>Natural Hazards and Earth System Sciences</em>, 2025 (Higman co-author)</figcaption>
 				</figure>
 
 				<figure class="science-quote">
 					<blockquote>
-						"Modeled runup for a Barry Arm-scale failure ranges from 35 to 150 m at tide-water margins and 8 to 30 m at Whittier harbor, sufficient to be life-threatening to the 1,500+ annual visitors."
+						"No systematic landslide warning threshold currently exists at either local scales for towns within southeast Alaska or the regional scale," despite the area's high susceptibility to slope failures.
 					</blockquote>
 					<figcaption>Patton et al., <em>Natural Hazards and Earth System Sciences</em>, 2023</figcaption>
 				</figure>
 			</div>
 
 			<p class="quotes-footer">
-				Tenfold increase in a decade. Rising visitor numbers. No systematic early-warning network.
+				Accelerating failures. Rising visitor numbers. No systematic early-warning network.
 			</p>
 		</div>
 	</section>
@@ -423,6 +431,33 @@
 		margin: 0 auto;
 		padding: 3rem 2rem;
 		width: 100%;
+	}
+
+	/* ── Back button ── */
+	.back-btn {
+		position: fixed;
+		top: 1rem;
+		left: 1rem;
+		z-index: 100;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		padding: 0.4rem 0.75rem 0.4rem 0.5rem;
+		background: rgba(28, 25, 23, 0.65);
+		backdrop-filter: blur(8px);
+		color: rgba(248, 250, 252, 0.85);
+		font-size: 0.8rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-decoration: none;
+		border-radius: 999px;
+		border: 1px solid rgba(248, 250, 252, 0.15);
+		transition: background 0.2s, color 0.2s;
+	}
+
+	.back-btn:hover {
+		background: rgba(28, 25, 23, 0.9);
+		color: #fcd34d;
 	}
 
 	/* ── Progress dots ── */
@@ -951,10 +986,6 @@
 
 	/* ── Responsive ── */
 	@media (max-width: 640px) {
-		.beforeafter-grid {
-			grid-template-columns: 1fr;
-		}
-
 		.quotes-grid {
 			grid-template-columns: 1fr;
 		}

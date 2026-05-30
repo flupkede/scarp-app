@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { fade } from 'svelte/transition';
+
 	let { onSearch, loading, explanation, resultCount, onClear }: {
 		onSearch: (query: string) => void;
 		loading: boolean;
@@ -8,6 +11,37 @@
 	} = $props();
 
 	let query = $state('');
+	let focused = $state(false);
+
+	// Rotating placeholder examples — show what the LLM search can do
+	const EXAMPLES = [
+		'near cruise ship routes',
+		'top 10 unmonitored high-risk sites',
+		'steep fjord walls with no coverage',
+		'highest exposure near Whittier',
+		'within 30 km of Barry Arm',
+		'most susceptible slopes, top 5'
+	];
+
+	let exampleIndex = $state(0);
+	const reducedMotion =
+		typeof window !== 'undefined' &&
+		window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+	// Show the rotating overlay only while the field is empty, idle, and unfocused.
+	let showRotating = $derived(!query && !focused && !loading && !reducedMotion);
+
+	// Static fallback placeholder (reduced-motion / focused / loading states).
+	const staticPlaceholder = `e.g. ${EXAMPLES[0]}`;
+
+	onMount(() => {
+		const interval = setInterval(() => {
+			if (showRotating) {
+				exampleIndex = (exampleIndex + 1) % EXAMPLES.length;
+			}
+		}, 3000);
+		return () => clearInterval(interval);
+	});
 
 	function handleSubmit(e: Event) {
 		e.preventDefault();
@@ -23,10 +57,24 @@
 			<input
 				type="text"
 				bind:value={query}
-				placeholder="e.g. near cruise ship routes"
+				onfocus={() => (focused = true)}
+				onblur={() => (focused = false)}
+				placeholder={showRotating ? '' : staticPlaceholder}
 				disabled={loading}
 				class="w-full rounded-lg bg-transparent px-3 py-2 text-sm text-ink placeholder:text-stone-400 focus:outline-none"
 			/>
+
+			<!-- Rotating example overlay — only when input is empty & idle -->
+			{#if showRotating}
+				{#key exampleIndex}
+					<span
+						class="ph-overlay"
+						aria-hidden="true"
+						in:fade={{ duration: 400 }}
+						out:fade={{ duration: 400 }}
+					>e.g. {EXAMPLES[exampleIndex]}</span>
+				{/key}
+			{/if}
 			<button
 				type="submit"
 				disabled={loading || !query.trim()}
@@ -64,3 +112,22 @@
 		{/if}
 	{/if}
 </div>
+
+<style>
+	/* Rotating example overlay — sits exactly over the input's text area,
+	   mimics the native placeholder colour, and never blocks clicks/typing. */
+	.ph-overlay {
+		position: absolute;
+		left: 0.75rem; /* matches input px-3 */
+		top: 50%;
+		transform: translateY(-50%);
+		font-size: 0.875rem; /* text-sm */
+		line-height: 1.25rem;
+		color: #a8a29e; /* stone-400 */
+		pointer-events: none;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: calc(100% - 3rem); /* leave room for the search button */
+	}
+</style>
