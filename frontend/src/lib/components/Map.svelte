@@ -55,10 +55,10 @@
 		canvas.height = size;
 		const ctx = canvas.getContext('2d')!;
 		ctx.clearRect(0, 0, size, size);
-		ctx.strokeStyle = 'rgba(100, 116, 139, 0.55)'; // slate-500 ~55%
-		ctx.lineWidth = 1.5;
-		// Diagonal lines NE↗ every 8 px, tiling seamlessly
-		for (let d = -size; d < size * 2; d += 8) {
+		ctx.strokeStyle = 'rgba(51, 65, 85, 0.9)'; // slate-700 ~90% — heavier/darker
+		ctx.lineWidth = 2.5;
+		// Diagonal lines NE↗ every 6 px, tiling seamlessly
+		for (let d = -size; d < size * 2; d += 6) {
 			ctx.beginPath();
 			ctx.moveTo(d, size);
 			ctx.lineTo(d + size, 0);
@@ -147,7 +147,7 @@
 					layout: { visibility: layerState.showConfidence ? 'visible' : 'none' },
 					paint: {
 						'fill-pattern': 'diagonal-hatch',
-						'fill-opacity': 0.15
+						'fill-opacity': 0.4
 					}
 				});
 
@@ -160,7 +160,7 @@
 					layout: { visibility: layerState.showConfidence ? 'visible' : 'none' },
 					paint: {
 						'fill-pattern': 'diagonal-hatch',
-						'fill-opacity': 0.35
+						'fill-opacity': 0.7
 					}
 				});
 			}
@@ -402,9 +402,9 @@
 		{#if layerState.showConfidence}
 			<div class="flex items-center gap-2 mt-2">
 				<svg width="14" height="10" viewBox="0 0 14 10" class="flex-shrink-0">
-					<rect width="14" height="10" fill="#94a3b8" opacity="0.15"/>
-					<line x1="0" y1="10" x2="10" y2="0" stroke="#64748b" stroke-width="1.2" opacity="0.55"/>
-					<line x1="4" y1="10" x2="14" y2="0" stroke="#64748b" stroke-width="1.2" opacity="0.55"/>
+					<line x1="-2" y1="10" x2="8" y2="0" stroke="#334155" stroke-width="2" opacity="0.9"/>
+					<line x1="2" y1="10" x2="12" y2="0" stroke="#334155" stroke-width="2" opacity="0.9"/>
+					<line x1="6" y1="10" x2="16" y2="0" stroke="#334155" stroke-width="2" opacity="0.9"/>
 				</svg>
 				<span>Data-limited area</span>
 			</div>
