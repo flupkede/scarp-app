@@ -227,7 +227,7 @@
 				source: 'candidates',
 				filter: ['>', ['get', 'rank'], 10],
 				paint: {
-					'circle-radius': 7,
+					'circle-radius': 5,
 					'circle-color': '#ffffff',
 					'circle-stroke-color': '#1c1917',
 					'circle-stroke-width': 1.5
@@ -241,7 +241,7 @@
 				source: 'candidates',
 				filter: ['>', ['get', 'rank'], 10],
 				paint: {
-					'circle-radius': 2,
+					'circle-radius': 1.5,
 					'circle-color': '#1c1917'
 				}
 			});
@@ -252,7 +252,7 @@
 				type: 'circle',
 				source: 'top10',
 				paint: {
-					'circle-radius': 7,
+					'circle-radius': 5,
 					'circle-color': '#dc2626',
 					'circle-stroke-color': '#ffffff',
 					'circle-stroke-width': 1.5

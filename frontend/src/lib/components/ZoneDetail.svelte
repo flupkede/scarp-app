@@ -105,9 +105,9 @@
 				Nearby known slides
 			</h4>
 			<div class="space-y-1.5">
-				{#each nearbySlides.slice(0, 5) as slide}
+				{#each nearbySlides.slice(0, 5) as slide, i}
 					<div class="text-xs text-stone-600 flex justify-between">
-						<span>{slide.name !== 'nan' ? slide.name : `Slide ${slide.id}`}</span>
+						<span>{slide.name && slide.name !== 'nan' ? slide.name : `${slide.source || 'Unknown'} slide`}</span>
 						<span class="text-stone-400">{slide.distance_km.toFixed(1)} km</span>
 					</div>
 				{/each}

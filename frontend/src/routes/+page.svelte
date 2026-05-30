@@ -52,7 +52,7 @@
 		showStations: true,
 		showInfluence: true,
 		showCandidates: true,
-		showConfidence: false
+		showConfidence: true
 	});
 
 	onMount(async () => {
