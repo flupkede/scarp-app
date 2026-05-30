@@ -26,9 +26,7 @@ Independent geologist Bretwood "Hig" Higman builds his own low-cost sensors and 
 
 > Click any site to see why it ranked. Ask in plain English: *"sites near cruise routes with no monitoring"* or *"highest exposure in Turnagain Arm"*.
 
-![Map showing ranked monitoring priority zones across Southeast Alaska fjords](docs/screenshots/map-preview.png)
-
-*(screenshot — [live demo](https://scarp.dsoft.services) available)*
+*→ [Open the live demo](https://scarp.dsoft.services) — click any zone to see its breakdown, or type a plain-English query.*
 
 ---
 

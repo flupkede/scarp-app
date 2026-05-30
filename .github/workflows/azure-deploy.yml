@@ -69,11 +69,9 @@ jobs:
       - name: Package backend for deployment
         working-directory: backend
         run: |
-          # Create a flat install layout that App Service Oryx can pick up
-          uv pip install --target ./deploy_pkg \
-            fastapi uvicorn[standard] shapely httpx openai \
-            pydantic pydantic-settings python-multipart gunicorn
-          cp -r src/scarp deploy_pkg/scarp
+          # Install project + all deps (single-sourced from pyproject.toml) into a flat
+          # layout that App Service Oryx can pick up. No manual dep list to drift.
+          uv pip install --target ./deploy_pkg .
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
@@ -81,6 +79,6 @@ jobs:
           app-name: scarp-api
           publish-profile: ${{ secrets.AZURE_APP_SERVICE_PUBLISH_PROFILE }}
           package: backend/deploy_pkg
-          startup-command: >
-            gunicorn -w 2 -k uvicorn.workers.UvicornWorker
-            --bind 0.0.0.0:8000 scarp.api.main:app
+          # startup-command is NOT a supported input on webapps-deploy@v3.
+          # Startup is set out-of-band via: az webapp config set --startup-file
+          # See docs/DEPLOY.md step 6 for the az CLI command.
