@@ -386,7 +386,7 @@
 </script>
 
 <div class="relative w-full h-full">
-	<div bind:this={mapContainer} class="absolute inset-0"></div>
+	<div bind:this={mapContainer} class="h-full w-full"></div>
 
 	<!-- Legend -->
 	<div class="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-3 text-xs pointer-events-none max-w-[200px]">
