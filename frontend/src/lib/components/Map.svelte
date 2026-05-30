@@ -137,7 +137,7 @@
 
 			// --- Layers (bottom to top) ---
 
-			// 0. Confidence — medium band (very faint solid grey, below everything)
+			// 0. Confidence — medium band (light hatch: "data thinner here")
 			if (confidence) {
 				m.addLayer({
 					id: 'confidence-medium',
@@ -146,8 +146,8 @@
 					filter: ['==', ['get', 'band'], 'medium'],
 					layout: { visibility: layerState.showConfidence ? 'visible' : 'none' },
 					paint: {
-						'fill-color': '#94a3b8',
-						'fill-opacity': 0.08
+						'fill-pattern': 'diagonal-hatch',
+						'fill-opacity': 0.15
 					}
 				});
 
