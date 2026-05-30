@@ -2,7 +2,7 @@
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import { getZoneStore } from '$lib/stores/zones.svelte';
-	import { fetchZones, fetchSlides, fetchStations, searchZones, type ZoneFeature } from '$lib/api';
+	import { fetchZones, fetchSlides, fetchStations, fetchConfidence, type ZoneFeature } from '$lib/api';
 	import MapComponent from '$lib/components/Map.svelte';
 	import Splash from '$lib/components/Splash.svelte';
 	import PriorityList from '$lib/components/PriorityList.svelte';
@@ -18,6 +18,7 @@
 	let influenceData = $state<GeoJSON.FeatureCollection>({ type: 'FeatureCollection', features: [] });
 	let slidesData = $state<GeoJSON.FeatureCollection>({ type: 'FeatureCollection', features: [] });
 	let stationsData = $state<GeoJSON.FeatureCollection>({ type: 'FeatureCollection', features: [] });
+	let confidenceData = $state<GeoJSON.FeatureCollection | null>(null);
 	let dataReady = $state(false);
 	let dataError = $state<string | null>(null);
 
@@ -29,6 +30,7 @@
 	let selectedSite = $state<ZoneFeature | null>(null);
 	let selectedNearbySlides = $state<any[]>([]);
 	let selectedRegion = $state('');
+	let selectedIsLowConfidence = $state(false);
 
 	// Search
 	let searchExplanation = $state<string | null>(null);
@@ -38,12 +40,19 @@
 	// Map ref
 	let mapComponent: any = null;
 
+	// API base — shared, using the same logic as api.ts
+	const API_BASE: string =
+		import.meta.env.VITE_PUBLIC_API_URL !== undefined
+			? import.meta.env.VITE_PUBLIC_API_URL
+			: 'http://localhost:8000';
+
 	// Layer state (reactive object shared with Map + LayerToggle)
 	let layerState = $state({
 		showSlides: true,
 		showStations: true,
 		showInfluence: true,
-		showCandidates: true
+		showCandidates: true,
+		showConfidence: false
 	});
 
 	onMount(async () => {
@@ -51,27 +60,25 @@
 
 		try {
 			// Load data from API
-			const [zones, slides, stations] = await Promise.all([
+			const [zones, slides, stations, confidence] = await Promise.all([
 				fetchZones(120),
 				fetchSlides(),
-				fetchStations()
+				fetchStations(),
+				fetchConfidence() // null if not yet generated — handled gracefully
 			]);
 
 			allSites = zones.features;
 			top10Sites = zones.features.filter((f) => f.properties.rank <= 10);
 			slidesData = slides;
 			stationsData = stations;
+			confidenceData = confidence; // null → toggle hidden in LayerToggle
 
-			// Load influence polygons from API too
-			// The API /api/zones returns points; influence polygons come from /api/layers/influence
-			// For now, build them from the same source
+			// Load influence polygons from API
 			try {
-				const API_BASE = import.meta.env.VITE_PUBLIC_API_URL || 'http://localhost:8000';
 				const infRes = await fetch(`${API_BASE}/api/layers/influence`);
 				if (infRes.ok) {
 					influenceData = await infRes.json();
 				} else {
-					// Fallback: generate circle polygons from points (3km radius)
 					influenceData = generateInfluenceFromPoints(zones.features);
 				}
 			} catch {
@@ -86,8 +93,6 @@
 	});
 
 	function generateInfluenceFromPoints(sites: ZoneFeature[]): GeoJSON.FeatureCollection {
-		// Simple circle generation: 32-sided polygon at ~3km radius
-		// Approximate: 1 degree lat ≈ 111km, 1 degree lon ≈ 111km * cos(lat)
 		const features = sites.map((site) => {
 			const [lon, lat] = site.geometry.coordinates;
 			const radiusKm = site.properties.influence_radius_km || 3;
@@ -111,29 +116,51 @@
 		return { type: 'FeatureCollection', features };
 	}
 
+	/** Ray-casting point-in-polygon — works for simple (non-self-intersecting) rings. */
+	function pointInPolygon(px: number, py: number, ring: number[][]): boolean {
+		let inside = false;
+		for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+			const xi = ring[i][0], yi = ring[i][1];
+			const xj = ring[j][0], yj = ring[j][1];
+			const intersect = ((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+			if (intersect) inside = !inside;
+		}
+		return inside;
+	}
+
+	function isInLowConfidenceZone(lon: number, lat: number): boolean {
+		if (!confidenceData) return false;
+		for (const feature of confidenceData.features) {
+			if (feature.properties?.band !== 'low') continue;
+			const geom = feature.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon;
+			if (geom.type === 'Polygon') {
+				if (pointInPolygon(lon, lat, geom.coordinates[0] as number[][])) return true;
+			} else if (geom.type === 'MultiPolygon') {
+				for (const poly of geom.coordinates) {
+					if (pointInPolygon(lon, lat, poly[0] as number[][])) return true;
+				}
+			}
+		}
+		return false;
+	}
+
 	function handleSelectSite(id: string) {
 		const site = allSites.find((f) => f.properties.id === id);
 		if (site) {
 			selectedSite = site;
-			const coords = site.geometry.coordinates;
-			selectedRegion = regionFor(coords[0], coords[1]);
+			const [lon, lat] = site.geometry.coordinates;
+			selectedRegion = regionFor(lon, lat);
+			selectedIsLowConfidence = isInLowConfidenceZone(lon, lat);
 
-			// Fetch nearby slides
-			const API_BASE = import.meta.env.VITE_PUBLIC_API_URL || 'http://localhost:8000';
 			fetch(`${API_BASE}/api/zones/${id}/nearby_slides`)
 				.then((r) => (r.ok ? r.json() : []))
-				.then((slides) => {
-					selectedNearbySlides = slides;
-				})
-				.catch(() => {
-					selectedNearbySlides = [];
-				});
+				.then((slides) => { selectedNearbySlides = slides; })
+				.catch(() => { selectedNearbySlides = []; });
 		}
 	}
 
 	function handleSearch(query: string) {
 		searchLoading = true;
-		const API_BASE = import.meta.env.VITE_PUBLIC_API_URL || 'http://localhost:8000';
 		fetch(`${API_BASE}/api/search`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
@@ -157,7 +184,6 @@
 		searchResultCount = null;
 	}
 
-	// Region lookup (same as in store, duplicated to avoid import issues)
 	function regionFor(lon: number, lat: number): string {
 		const FJORDS = [
 			{ name: 'Lituya Bay', lon: -137.7, lat: 58.65 },
@@ -182,10 +208,7 @@
 		let closest = 'SE Alaska';
 		for (const f of FJORDS) {
 			const d = Math.sqrt((lon - f.lon) ** 2 + (lat - f.lat) ** 2);
-			if (d < minDist) {
-				minDist = d;
-				closest = f.name;
-			}
+			if (d < minDist) { minDist = d; closest = f.name; }
 		}
 		return closest;
 	}
@@ -198,13 +221,15 @@
 			<h1 class="text-white font-serif font-bold text-lg tracking-wide">SCARP</h1>
 			<span class="text-white/40 text-xs">Landslide monitoring placement</span>
 		</div>
-		<a href="/about" class="text-white/50 hover:text-white/80 text-xs">About</a>
+		<nav class="flex items-center gap-4">
+			<a href="/story" class="text-white/50 hover:text-white/80 text-xs">Story</a>
+			<a href="/about" class="text-white/50 hover:text-white/80 text-xs">About</a>
+		</nav>
 	</header>
 
 	<!-- Main content -->
 	<div class="flex-1 flex overflow-hidden relative">
 		{#if !dataReady && !dataError}
-			<!-- Loading state -->
 			<div class="flex-1 flex items-center justify-center">
 				<div class="text-center">
 					<div class="animate-pulse text-2xl font-serif text-ink mb-2">Loading data...</div>
@@ -232,7 +257,7 @@
 				<div class="flex-1 overflow-hidden">
 					<PriorityList sites={allSites} onSelect={handleSelectSite} />
 				</div>
-				<LayerToggle {layerState} />
+				<LayerToggle {layerState} hasConfidence={confidenceData !== null} />
 			</aside>
 
 			<!-- Map area -->
@@ -248,18 +273,20 @@
 					influenceGeojson={influenceData}
 					slides={slidesData}
 					stations={stationsData}
+					confidence={confidenceData}
 					onSelectSite={handleSelectSite}
 				/>
 
-				<!-- Detail panel (slide in from right) -->
 				{#if selectedSite}
 					<ZoneDetail
 						site={selectedSite}
 						nearbySlides={selectedNearbySlides}
 						regionLabel={selectedRegion}
+						isLowConfidence={selectedIsLowConfidence}
 						onClose={() => {
 							selectedSite = null;
 							selectedNearbySlides = [];
+							selectedIsLowConfidence = false;
 						}}
 					/>
 				{/if}

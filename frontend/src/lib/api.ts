@@ -108,3 +108,19 @@ export async function searchZones(query: string): Promise<SearchResponse> {
 		body: JSON.stringify({ query })
 	});
 }
+
+/**
+ * Fetch the data-confidence layer. Returns null if the file isn't generated yet
+ * (404) — the toggle is hidden in that case; no console errors.
+ */
+export async function fetchConfidence(): Promise<GeoJSON.FeatureCollection | null> {
+	const url = `${API_BASE}/api/layers/confidence`;
+	try {
+		const res = await fetch(url);
+		if (res.status === 404) return null;
+		if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
+		return res.json();
+	} catch {
+		return null;
+	}
+}

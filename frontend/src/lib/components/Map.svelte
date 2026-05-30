@@ -3,18 +3,20 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { onMount } from 'svelte';
 
-	let { sites, top10, influenceGeojson, slides, stations, onSelectSite, layerState }: {
+	let { sites, top10, influenceGeojson, slides, stations, confidence, onSelectSite, layerState }: {
 		sites: GeoJSON.FeatureCollection;
 		top10: GeoJSON.Feature[];
 		influenceGeojson: GeoJSON.FeatureCollection;
 		slides: GeoJSON.FeatureCollection;
 		stations: GeoJSON.FeatureCollection;
+		confidence: GeoJSON.FeatureCollection | null;
 		onSelectSite: (id: string) => void;
 		layerState: {
 			showSlides: boolean;
 			showStations: boolean;
 			showInfluence: boolean;
 			showCandidates: boolean;
+			showConfidence: boolean;
 		};
 	} = $props();
 
@@ -23,15 +25,15 @@
 
 	function toggleLayer(layerId: string, visible: boolean) {
 		if (!map) return;
-		map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
+		try {
+			if (map.getLayer(layerId)) {
+				map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
+			}
+		} catch { /* layer may not exist yet */ }
 	}
 
-	$effect(() => {
-		toggleLayer('slides-layer', layerState.showSlides);
-	});
-	$effect(() => {
-		toggleLayer('stations-layer', layerState.showStations);
-	});
+	$effect(() => { toggleLayer('slides-layer', layerState.showSlides); });
+	$effect(() => { toggleLayer('stations-layer', layerState.showStations); });
 	$effect(() => {
 		toggleLayer('zones-fill', layerState.showInfluence);
 		toggleLayer('zones-outline', layerState.showInfluence);
@@ -40,6 +42,30 @@
 		toggleLayer('candidates-target', layerState.showCandidates);
 		toggleLayer('candidates-dot', layerState.showCandidates);
 	});
+	$effect(() => {
+		toggleLayer('confidence-low', layerState.showConfidence);
+		toggleLayer('confidence-medium', layerState.showConfidence);
+	});
+
+	/** Generate a 32×32 diagonal-hatch ImageData for MapLibre fill-pattern. */
+	function makeDiagonalHatch(): ImageData {
+		const size = 32;
+		const canvas = document.createElement('canvas');
+		canvas.width = size;
+		canvas.height = size;
+		const ctx = canvas.getContext('2d')!;
+		ctx.clearRect(0, 0, size, size);
+		ctx.strokeStyle = 'rgba(100, 116, 139, 0.55)'; // slate-500 ~55%
+		ctx.lineWidth = 1.5;
+		// Diagonal lines NE↗ every 8 px, tiling seamlessly
+		for (let d = -size; d < size * 2; d += 8) {
+			ctx.beginPath();
+			ctx.moveTo(d, size);
+			ctx.lineTo(d + size, 0);
+			ctx.stroke();
+		}
+		return ctx.getImageData(0, 0, size, size);
+	}
 
 	onMount(() => {
 		if (!mapContainer) return;
@@ -74,39 +100,60 @@
 		m.addControl(new maplibregl.NavigationControl(), 'top-right');
 
 		m.on('load', () => {
+			// --- Diagonal hatch pattern for confidence layer ---
+			m.addImage('diagonal-hatch', makeDiagonalHatch());
+
 			// --- Sources ---
 
 			// Influence areas (polygons) — candidates_influence
-			m.addSource('zones', {
-				type: 'geojson',
-				data: influenceGeojson
-			});
+			m.addSource('zones', { type: 'geojson', data: influenceGeojson });
 
 			// Candidate sites (points) — zones.geojson
-			m.addSource('candidates', {
-				type: 'geojson',
-				data: sites
-			});
+			m.addSource('candidates', { type: 'geojson', data: sites });
 
 			// Top 10 (points) — for labels + pulse
-			m.addSource('top10', {
-				type: 'geojson',
-				data: { type: 'FeatureCollection', features: top10 }
-			});
+			m.addSource('top10', { type: 'geojson', data: { type: 'FeatureCollection', features: top10 } });
 
 			// Slides
-			m.addSource('slides', {
-				type: 'geojson',
-				data: slides
-			});
+			m.addSource('slides', { type: 'geojson', data: slides });
 
 			// Stations
-			m.addSource('stations', {
-				type: 'geojson',
-				data: stations
-			});
+			m.addSource('stations', { type: 'geojson', data: stations });
+
+			// Confidence layer (optional — null if not generated yet)
+			if (confidence) {
+				m.addSource('confidence', { type: 'geojson', data: confidence });
+			}
 
 			// --- Layers (bottom to top) ---
+
+			// 0. Confidence — medium band (very faint solid grey, below everything)
+			if (confidence) {
+				m.addLayer({
+					id: 'confidence-medium',
+					type: 'fill',
+					source: 'confidence',
+					filter: ['==', ['get', 'band'], 'medium'],
+					layout: { visibility: layerState.showConfidence ? 'visible' : 'none' },
+					paint: {
+						'fill-color': '#94a3b8',
+						'fill-opacity': 0.08
+					}
+				});
+
+				// 0b. Confidence — low band (diagonal hatch, clearly "no data")
+				m.addLayer({
+					id: 'confidence-low',
+					type: 'fill',
+					source: 'confidence',
+					filter: ['==', ['get', 'band'], 'low'],
+					layout: { visibility: layerState.showConfidence ? 'visible' : 'none' },
+					paint: {
+						'fill-pattern': 'diagonal-hatch',
+						'fill-opacity': 0.35
+					}
+				});
+			}
 
 			// 1. Influence area fill — rank gradient red→amber→yellow
 			m.addLayer({
@@ -116,12 +163,9 @@
 				paint: {
 					'fill-color': [
 						'case',
-						['<=', ['get', 'rank'], 10],
-						'#dc2626',
-						['<=', ['get', 'rank'], 30],
-						'#ea580c',
-						['<=', ['get', 'rank'], 60],
-						'#f59e0b',
+						['<=', ['get', 'rank'], 10], '#dc2626',
+						['<=', ['get', 'rank'], 30], '#ea580c',
+						['<=', ['get', 'rank'], 60], '#f59e0b',
 						'#fbbf24'
 					],
 					'fill-opacity': 0.35
@@ -262,7 +306,6 @@
 
 			// --- Interactions ---
 
-			// Click on candidate → select + flyTo
 			const candidateLayers = ['candidates-target', 'candidates-dot', 'top10-ring', 'top10-mid', 'top10-dot'];
 			for (const layerId of candidateLayers) {
 				m.on('click', layerId, (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
@@ -275,31 +318,19 @@
 						}
 					}
 				});
-				// Cursor
-				m.on('mouseenter', layerId, () => {
-					m.getCanvas().style.cursor = 'pointer';
-				});
-				m.on('mouseleave', layerId, () => {
-					m.getCanvas().style.cursor = '';
-				});
+				m.on('mouseenter', layerId, () => { m.getCanvas().style.cursor = 'pointer'; });
+				m.on('mouseleave', layerId, () => { m.getCanvas().style.cursor = ''; });
 			}
 
 			// Hover on influence zone → tooltip
-			const popup = new maplibregl.Popup({
-				closeButton: false,
-				closeOnClick: false,
-				offset: 10
-			});
+			const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10 });
 
 			m.on('mouseenter', 'zones-fill', (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
 				if (e.features && e.features.length > 0) {
 					m.getCanvas().style.cursor = 'pointer';
 					const props = e.features[0].properties;
 					const coords = (e.features[0].geometry as GeoJSON.Point).coordinates as [number, number];
-					popup
-						.setLngLat(coords)
-						.setHTML(`<strong>#${props.rank}</strong> — Score: ${props.score?.toFixed(3)}`)
-						.addTo(m);
+					popup.setLngLat(coords).setHTML(`<strong>#${props.rank}</strong> — Score: ${props.score?.toFixed(3)}`).addTo(m);
 				}
 			});
 			m.on('mouseleave', 'zones-fill', () => {
@@ -311,10 +342,8 @@
 			m.on('click', 'slides-layer', (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
 				if (e.features && e.features.length > 0) {
 					const props = e.features[0].properties;
-					new maplibregl.Popup({ offset: 5 })
-						.setLngLat(e.lngLat)
-						.setHTML(`<strong>Slide</strong><br/>Source: ${props.source}`)
-						.addTo(m);
+					new maplibregl.Popup({ offset: 5 }).setLngLat(e.lngLat)
+						.setHTML(`<strong>Slide</strong><br/>Source: ${props.source}`).addTo(m);
 				}
 			});
 
@@ -322,10 +351,8 @@
 			m.on('click', 'stations-layer', (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
 				if (e.features && e.features.length > 0) {
 					const props = e.features[0].properties;
-					new maplibregl.Popup({ offset: 5 })
-						.setLngLat(e.lngLat)
-						.setHTML(`<strong>${props.site_name}</strong><br/>Code: ${props.station_code} (${props.network})`)
-						.addTo(m);
+					new maplibregl.Popup({ offset: 5 }).setLngLat(e.lngLat)
+						.setHTML(`<strong>${props.site_name}</strong><br/>Code: ${props.station_code} (${props.network})`).addTo(m);
 				}
 			});
 
@@ -345,9 +372,7 @@
 
 		map = m;
 
-		return () => {
-			m.remove();
-		};
+		return () => { m.remove(); };
 	});
 </script>
 
@@ -373,5 +398,16 @@
 			<span class="inline-block w-4 h-3 rounded-sm flex-shrink-0" style="background: linear-gradient(to right, #dc2626, #f59e0b)"></span>
 			<span>High → Lower priority</span>
 		</div>
+
+		{#if layerState.showConfidence}
+			<div class="flex items-center gap-2 mt-2">
+				<svg width="14" height="10" viewBox="0 0 14 10" class="flex-shrink-0">
+					<rect width="14" height="10" fill="#94a3b8" opacity="0.15"/>
+					<line x1="0" y1="10" x2="10" y2="0" stroke="#64748b" stroke-width="1.2" opacity="0.55"/>
+					<line x1="4" y1="10" x2="14" y2="0" stroke="#64748b" stroke-width="1.2" opacity="0.55"/>
+				</svg>
+				<span>Data-limited area</span>
+			</div>
+		{/if}
 	</div>
 </div>

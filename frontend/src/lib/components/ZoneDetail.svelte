@@ -1,10 +1,12 @@
 <script lang="ts">
 	import type { ZoneFeature, NearbySlide } from '$lib/api';
 
-	let { site, nearbySlides, regionLabel, onClose }: {
+	let { site, nearbySlides, regionLabel, isLowConfidence = false, onClose }: {
 		site: ZoneFeature;
 		nearbySlides: NearbySlide[];
 		regionLabel: string;
+		/** True when the site falls within a low-confidence data band. */
+		isLowConfidence?: boolean;
 		onClose: () => void;
 	} = $props();
 
@@ -46,8 +48,16 @@
 		</button>
 	</div>
 
+	<!-- Low-confidence warning -->
+	{#if isLowConfidence}
+		<div class="mx-4 mt-3 px-3 py-2 bg-stone-100 border border-stone-300 rounded text-xs text-stone-600 flex gap-2 items-start">
+			<span class="text-lg leading-none mt-0.5">▨</span>
+			<span>This site sits in a <strong>data-limited area</strong>. Public data coverage here is thin — treat this ranking as provisional.</span>
+		</div>
+	{/if}
+
 	<!-- Scores -->
-	<div class="px-4 py-3 border-b border-stone-200">
+	<div class="px-4 py-3 border-b border-stone-200 {isLowConfidence ? '' : 'mt-3'}">
 		<div class="grid grid-cols-3 gap-2 text-center">
 			<div>
 				<div class="text-xs text-stone-500 uppercase tracking-wide">Score</div>

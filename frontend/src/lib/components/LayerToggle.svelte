@@ -1,11 +1,14 @@
 <script lang="ts">
-	let { layerState }: {
+	let { layerState, hasConfidence = false }: {
 		layerState: {
 			showSlides: boolean;
 			showStations: boolean;
 			showInfluence: boolean;
 			showCandidates: boolean;
+			showConfidence: boolean;
 		} | null;
+		/** Whether confidence.geojson has been generated yet. If false, toggle is hidden. */
+		hasConfidence?: boolean;
 	} = $props();
 
 	function toggle(key: string) {
@@ -60,5 +63,30 @@
 			<span class="inline-block w-3 h-3 rounded-full bg-stone-800 opacity-40"></span>
 			Known slides
 		</label>
+
+		{#if hasConfidence}
+			<label class="flex items-center gap-2 text-xs text-ink cursor-pointer">
+				<input
+					type="checkbox"
+					checked={layerState?.showConfidence ?? false}
+					onchange={() => toggle('showConfidence')}
+					class="rounded border-stone-300 text-amber-500 focus:ring-amber-400"
+				/>
+				<!-- Diagonal hatch swatch -->
+				<svg width="12" height="12" viewBox="0 0 12 12" class="flex-shrink-0">
+					<rect width="12" height="12" fill="#9ca3af" opacity="0.2"/>
+					<line x1="0" y1="12" x2="12" y2="0" stroke="#6b7280" stroke-width="1.5" opacity="0.5"/>
+					<line x1="-6" y1="12" x2="6" y2="0" stroke="#6b7280" stroke-width="1.5" opacity="0.5"/>
+					<line x1="6" y1="12" x2="18" y2="0" stroke="#6b7280" stroke-width="1.5" opacity="0.5"/>
+				</svg>
+				Data confidence
+			</label>
+		{/if}
 	</div>
+
+	{#if hasConfidence && layerState?.showConfidence}
+		<p class="mt-2 text-[10px] text-stone-400 leading-snug">
+			▨ grey hatch = monitoring/data gap (we're blind here)
+		</p>
+	{/if}
 </div>
