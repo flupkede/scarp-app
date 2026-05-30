@@ -21,7 +21,7 @@
     "X-XSS-Protection": "1; mode=block",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
-    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://*.arcgisonline.com; connect-src 'self' https://server.arcgisonline.com https://*.arcgisonline.com; worker-src 'self' blob:; child-src blob:;"
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://*.arcgisonline.com; connect-src 'self' https://server.arcgisonline.com https://*.arcgisonline.com https://api.anthropic.com https://api.deepinfra.com https://demotiles.maplibre.org; worker-src 'self' blob:; child-src blob:;"
   },
   "mimeTypes": {
     ".geojson": "application/geo+json"

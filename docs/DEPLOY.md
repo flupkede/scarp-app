@@ -50,7 +50,7 @@ az webapp identity assign -g $RG -n $APP --scope $VAULT_ID --role "Key Vault Sec
 
 # 5. Store LLM API key in Key Vault, wire to App Service
 SECRET_URI=$(az keyvault secret set --vault-name $VAULT --name llm-api-key \
-  --value "<YOUR-DEEPINFRA-OR-OPENAI-KEY>" --query id -o tsv)
+  --value "<YOUR-API-KEY>" --query id -o tsv)
 az webapp config appsettings set -g $RG -n $APP \
   --settings LLM_API_KEY="@Microsoft.KeyVault(SecretUri=$SECRET_URI)"
 
@@ -58,12 +58,23 @@ az webapp config appsettings set -g $RG -n $APP \
 SWA_HOSTNAME="<your-swa-name>.azurestaticapps.net"
 az webapp config set -g $RG -n $APP \
   --startup-file "gunicorn -w 2 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 scarp.api.main:app"
+
+# Choose ONE LLM provider:
+# Option A — DeepInfra (default)
 az webapp config appsettings set -g $RG -n $APP \
   --settings \
     CORS_ALLOW_ORIGINS="https://$SWA_HOSTNAME" \
     LLM_BASE_URL="https://api.deepinfra.com/v1/openai" \
     LLM_MODEL="zai-org/GLM-4.7-Flash" \
     DATA_DIR="/home/site/wwwroot/data/processed"
+
+# Option B — Anthropic (native SDK)
+# az webapp config appsettings set -g $RG -n $APP \
+#   --settings \
+#     CORS_ALLOW_ORIGINS="https://$SWA_HOSTNAME" \
+#     LLM_BASE_URL="https://api.anthropic.com" \
+#     LLM_MODEL="claude-haiku-4-5-20251001" \
+#     DATA_DIR="/home/site/wwwroot/data/processed"
 
 # 7. Static Web App (Standard tier for backend linking)
 az staticwebapp create -n $SWA -g $RG --sku Standard
