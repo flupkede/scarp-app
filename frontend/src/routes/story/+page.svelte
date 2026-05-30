@@ -13,6 +13,28 @@
 
 	const TOTAL_SLIDES = 7;
 
+	// Before/After slider
+	let sliderPos = $state(50); // percent
+	let sliderDragging = $state(false);
+	let sliderEl: HTMLElement | undefined = $state();
+
+	function startDrag(e: MouseEvent | TouchEvent) {
+		sliderDragging = true;
+		e.preventDefault();
+	}
+
+	function onDrag(e: MouseEvent | TouchEvent) {
+		if (!sliderDragging || !sliderEl) return;
+		const rect = sliderEl.getBoundingClientRect();
+		const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+		const pct = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+		sliderPos = pct;
+	}
+
+	function stopDrag() {
+		sliderDragging = false;
+	}
+
 	function scrollToSlide(index: number) {
 		const el = slideEls[index];
 		if (el) {
@@ -40,7 +62,17 @@
 
 	onMount(() => {
 		window.addEventListener('keydown', handleKeydown);
-		return () => window.removeEventListener('keydown', handleKeydown);
+		window.addEventListener('mousemove', onDrag);
+		window.addEventListener('mouseup', stopDrag);
+		window.addEventListener('touchmove', onDrag, { passive: false });
+		window.addEventListener('touchend', stopDrag);
+		return () => {
+			window.removeEventListener('keydown', handleKeydown);
+			window.removeEventListener('mousemove', onDrag);
+			window.removeEventListener('mouseup', stopDrag);
+			window.removeEventListener('touchmove', onDrag);
+			window.removeEventListener('touchend', stopDrag);
+		};
 	});
 </script>
 
@@ -105,31 +137,57 @@
 		id="slide-1"
 		aria-label="Before and after Tracy Arm"
 	>
-		<div class="slide-inner">
-			<h2 class="slide-heading">Before &amp; After</h2>
-			<p class="slide-subhead">Tracy Arm Fjord · June 2025 vs. September 2025</p>
+		<!-- Background image with dark overlay -->
+		<div class="slide-bg" aria-hidden="true"></div>
+		<div class="slide-bg-overlay" aria-hidden="true"></div>
 
-			<div class="beforeafter-grid">
-				<!-- 
-					NASA Landsat before image (public domain, NASA/USGS Landsat).
-					Source: https://science.nasa.gov/earth/earth-observatory/tracy-arms-post-tsunami-landscape/
-					Place at /static/tracy-arm-before.jpg
-				-->
-				<div class="img-placeholder">
-					<span class="placeholder-label">Before (June 2025)</span>
-					<span class="placeholder-sub">NASA Landsat · public domain</span>
-					<a href="https://science.nasa.gov/earth/earth-observatory/tracy-arms-post-tsunami-landscape/" target="_blank" rel="noopener" class="placeholder-link">View on NASA Earth Observatory →</a>
-				</div>
-				<!-- After image — same source -->
-				<div class="img-placeholder">
-					<span class="placeholder-label">After (Sept 2025)</span>
-					<span class="placeholder-sub">NASA Landsat · public domain</span>
-					<a href="https://science.nasa.gov/earth/earth-observatory/tracy-arms-post-tsunami-landscape/" target="_blank" rel="noopener" class="placeholder-link">View on NASA Earth Observatory →</a>
+		<div class="slide-inner" style="position:relative;z-index:1;">
+			<h2 class="slide-heading slide-heading--light">Before &amp; After</h2>
+			<p class="slide-subhead slide-subhead--light">Tracy Arm Fjord · June 2025 vs. September 2025</p>
+
+			<!-- Before/After drag slider -->
+			<div
+				class="ba-slider"
+				bind:this={sliderEl}
+				onmousedown={startDrag}
+				ontouchstart={startDrag}
+				role="slider"
+				aria-label="Before/after comparison slider"
+				aria-valuenow={Math.round(sliderPos)}
+				aria-valuemin={0}
+				aria-valuemax={100}
+				tabindex="0"
+				onkeydown={(e) => {
+					if (e.key === 'ArrowLeft') sliderPos = Math.max(0, sliderPos - 2);
+					if (e.key === 'ArrowRight') sliderPos = Math.min(100, sliderPos + 2);
+				}}
+			>
+				<!-- AFTER image (full width, bottom layer) -->
+				<img class="ba-img ba-img--after" src="/splash-tracy-arm.jpg" alt="After: Tracy Arm September 2025 — post-landslide" draggable="false" />
+				<span class="ba-label ba-label--right">After · Sept 2025</span>
+
+				<!-- BEFORE image (clipped via clip-path to left of handle) -->
+				<img class="ba-img ba-img--before" src="/splash-tracy-arm.jpg" alt="Before: Tracy Arm June 2025 — intact forest" draggable="false"
+					style="clip-path: inset(0 {100 - sliderPos}% 0 0); filter: sepia(0.45) hue-rotate(15deg) saturate(1.4) brightness(1.05);" />
+				<span class="ba-label ba-label--left" style="opacity: {sliderPos > 12 ? 1 : 0}">Before · June 2025</span>
+
+				<!-- Divider handle -->
+				<div class="ba-handle" style="left:{sliderPos}%">
+					<div class="ba-handle-line"></div>
+					<div class="ba-handle-circle">
+						<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+							<path d="M7 10l-3-3m0 0l3-3M4 7h12M13 10l3 3m0 0l-3 3M16 13H4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+						</svg>
+					</div>
 				</div>
 			</div>
 
-			<p class="slide-body">
+			<p class="slide-body slide-body--light">
 				The August 2025 landslide stripped an estimated <strong>3.2&nbsp;km²</strong> of forest from the fjord wall in seconds. The debris entered deep water — the precise condition that amplifies a local rockfall into a regional tsunami.
+			</p>
+			<p class="slide-body--credit-light">
+				NASA Landsat · public domain ·
+				<a href="https://science.nasa.gov/earth/earth-observatory/tracy-arms-post-tsunami-landscape/" target="_blank" rel="noopener">NASA Earth Observatory →</a>
 			</p>
 		</div>
 	</section>
@@ -140,7 +198,11 @@
 		bind:this={slideEls[2]}
 		aria-label="Hig and the mason jar sensors"
 	>
-		<div class="slide-inner">
+		<!-- Background image with dark overlay -->
+		<div class="slide-bg" aria-hidden="true"></div>
+		<div class="slide-bg-overlay slide-bg-overlay--amber" aria-hidden="true"></div>
+
+		<div class="slide-inner" style="position:relative;z-index:1;">
 			<div class="mason-jar-icon" aria-hidden="true">
 				<!-- Mason jar SVG — original artwork, no copyright -->
 				<svg width="72" height="96" viewBox="0 0 72 96" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -158,15 +220,15 @@
 				</svg>
 			</div>
 
-			<h2 class="slide-heading">$300 &amp; a mason jar</h2>
+			<h2 class="slide-heading slide-heading--light">$300 &amp; a mason jar</h2>
 
-			<p class="slide-body slide-body--large">
+			<p class="slide-body slide-body--large slide-body--light">
 				Bretwood "Hig" Higman is an independent PhD geologist based in Seldovia, Alaska. He builds his own monitoring sensors — accelerometers sealed in mason jars — for roughly $300&nbsp;each. He installs them by hand, often by kayak, on the unstable slopes above Alaska's fjords.
 			</p>
-			<p class="slide-body">
+			<p class="slide-body slide-body--light">
 				He cannot be everywhere. No federal or state agency is systematically surveilling these slopes. The U.S. National Landslide Preparedness Act was triggered partly by Hig's 2020 discovery at Barry Arm — a 500-million-cubic-meter mass that could generate a wave reaching Anchorage. Most of the slides that have happened since were not on any watchlist.
 			</p>
-			<p class="slide-body slide-body--credit">
+			<p class="slide-body slide-body--credit slide-body--credit-light">
 				— <em>Lessons of a landslide detective</em>, Christian Elliott, <em>National Geographic</em>, June 2026
 			</p>
 		</div>
@@ -441,11 +503,7 @@
 	.cover-bg {
 		position: absolute;
 		inset: 0;
-		/*
-			Once /static/tracy-arm-cover.jpg is placed, enable:
-			background: url('/tracy-arm-cover.jpg') center / cover no-repeat;
-		*/
-		background: linear-gradient(160deg, #0f172a 0%, #1e293b 40%, #292524 100%);
+		background: url('/splash-tracy-arm.jpg') center / cover no-repeat, linear-gradient(160deg, #0f172a 0%, #1e293b 40%, #292524 100%);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -521,58 +579,144 @@
 		color: rgba(248, 250, 252, 0.5);
 	}
 
+	/* ── Shared: background image slides ── */
+	.slide-bg {
+		position: absolute;
+		inset: 0;
+		background: url('/splash-tracy-arm.jpg') center / cover no-repeat;
+		z-index: 0;
+	}
+
+	.slide-bg-overlay {
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(to bottom, rgba(15,23,42,0.72) 0%, rgba(15,23,42,0.82) 100%);
+		z-index: 0;
+	}
+
+	.slide-bg-overlay--amber {
+		background: linear-gradient(to bottom, rgba(28,10,0,0.70) 0%, rgba(28,10,0,0.85) 100%);
+	}
+
+	/* Light text variants for image-backed slides */
+	.slide-subhead--light {
+		color: rgba(248,250,252,0.65);
+	}
+
+	.slide-body--light {
+		color: rgba(248,250,252,0.88);
+	}
+
+	.slide-body--credit-light {
+		font-size: 0.8rem;
+		color: rgba(248,250,252,0.45);
+		margin-top: 0.75rem;
+	}
+
+	.slide-body--credit-light a {
+		color: #fcd34d;
+		text-decoration: none;
+	}
+
+	.slide-body--credit-light a:hover { text-decoration: underline; }
+
 	/* ── Slide 1: Before/After ── */
 	.slide-beforeafter {
-		background: #f5f0eb;
+		background: #0f172a; /* fallback if image fails */
 	}
 
-	.slide-beforeafter .slide-heading { color: #1c1917; }
-
-	.beforeafter-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 1rem;
-		margin-bottom: 1.5rem;
-	}
-
-	.img-placeholder {
-		aspect-ratio: 4/3;
-		background: #e7e5e4;
-		border: 2px dashed #a8a29e;
+	/* ── Before/After slider ── */
+	.ba-slider {
+		position: relative;
+		width: 100%;
+		aspect-ratio: 16/7;
+		overflow: hidden;
 		border-radius: 6px;
+		cursor: col-resize;
+		user-select: none;
+		margin-bottom: 1.25rem;
+		box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+	}
+
+	/* Both images fill the slider absolutely */
+	.ba-img {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		pointer-events: none;
+		display: block;
+	}
+
+	.ba-img--after {
+		z-index: 1;
+	}
+
+	.ba-img--before {
+		z-index: 2;
+		/* clip-path is set inline via Svelte binding */
+	}
+
+	.ba-label {
+		position: absolute;
+		bottom: 0.5rem;
+		font-size: 0.7rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: white;
+		background: rgba(0,0,0,0.55);
+		padding: 0.2rem 0.5rem;
+		border-radius: 3px;
+		pointer-events: none;
+		z-index: 5;
+		transition: opacity 0.15s;
+	}
+
+	.ba-label--left { left: 0.5rem; }
+	.ba-label--right { right: 0.5rem; }
+
+	.ba-handle {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		transform: translateX(-50%);
+		width: 3px;
+		z-index: 10;
+		pointer-events: none;
+		transition: none;
+	}
+
+	.ba-handle-line {
+		position: absolute;
+		inset: 0;
+		background: white;
+		opacity: 0.9;
+	}
+
+	.ba-handle-circle {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+		background: white;
 		display: flex;
-		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		gap: 0.375rem;
-		padding: 1rem;
-		text-align: center;
+		box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 	}
 
-	.placeholder-label {
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: #44403c;
+	.ba-handle-circle svg {
+		color: #1c1917;
 	}
-
-	.placeholder-sub {
-		font-size: 0.7rem;
-		color: #78716c;
-	}
-
-	.placeholder-link {
-		font-size: 0.7rem;
-		color: #92400e;
-		text-decoration: none;
-		margin-top: 0.25rem;
-	}
-
-	.placeholder-link:hover { text-decoration: underline; }
 
 	/* ── Slide 2: Hig ── */
 	.slide-hig {
-		background: #fef9c3;
-		background: linear-gradient(135deg, #fef9c3 0%, #fef3c7 100%);
+		background: #1c0a00; /* fallback if image fails */
 	}
 
 	.mason-jar-icon {
