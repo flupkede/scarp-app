@@ -38,8 +38,8 @@
 				onchange={() => toggle('showCandidates')}
 				class="rounded border-stone-300 text-amber-500 focus:ring-amber-400"
 			/>
-			<span class="inline-block w-3 h-3 rounded-full border border-ink bg-white relative">
-				<span class="absolute inset-0.5 bg-ink rounded-full"></span>
+			<span class="inline-block w-3 h-3 rounded-full border border-green-600 bg-white relative">
+				<span class="absolute inset-0.5 bg-green-600 rounded-full"></span>
 			</span>
 			Candidates
 		</label>
@@ -60,8 +60,8 @@
 				onchange={() => toggle('showSlides')}
 				class="rounded border-stone-300 text-amber-500 focus:ring-amber-400"
 			/>
-			<span class="inline-block w-3 h-3 rounded-full bg-stone-800 opacity-40"></span>
-			Known slides
+			<span class="inline-block w-3 h-3 rounded-full bg-amber-700 opacity-50"></span>
+			Known slides (39k)
 		</label>
 
 		{#if hasConfidence}

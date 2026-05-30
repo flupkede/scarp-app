@@ -48,7 +48,7 @@
 
 	// Layer state (reactive object shared with Map + LayerToggle)
 	let layerState = $state({
-		showSlides: true,
+		showSlides: false,
 		showStations: true,
 		showInfluence: true,
 		showCandidates: true,

@@ -194,15 +194,16 @@
 				}
 			});
 
-			// 3. Slide markers — small dark dots
+			// 3. Slide markers — historical context only: tiny faint amber dots, hidden by default
 			m.addLayer({
 				id: 'slides-layer',
 				type: 'circle',
 				source: 'slides',
+				layout: { visibility: layerState.showSlides ? 'visible' : 'none' },
 				paint: {
-					'circle-color': '#1f2937',
-					'circle-radius': 3,
-					'circle-opacity': 0.4
+					'circle-color': '#b45309',
+					'circle-radius': 1.5,
+					'circle-opacity': 0.25
 				}
 			});
 
@@ -219,7 +220,7 @@
 				}
 			});
 
-			// 5. Candidate target symbol — outer ring
+			// 5. Candidate target symbol — green outer ring (recommended site)
 			m.addLayer({
 				id: 'candidates-target',
 				type: 'circle',
@@ -228,24 +229,24 @@
 				paint: {
 					'circle-radius': 7,
 					'circle-color': '#ffffff',
-					'circle-stroke-color': '#1c1917',
-					'circle-stroke-width': 1.5
+					'circle-stroke-color': '#16a34a',
+					'circle-stroke-width': 2
 				}
 			});
 
-			// 5b. Candidate target — inner dot
+			// 5b. Candidate target — green inner dot
 			m.addLayer({
 				id: 'candidates-dot',
 				type: 'circle',
 				source: 'candidates',
 				filter: ['>', ['get', 'rank'], 10],
 				paint: {
-					'circle-radius': 2,
-					'circle-color': '#1c1917'
+					'circle-radius': 2.5,
+					'circle-color': '#16a34a'
 				}
 			});
 
-			// 6. Top 10 — larger target symbols with pulse ring
+			// 6. Top 10 — larger green target symbols with pulse ring
 			m.addLayer({
 				id: 'top10-ring',
 				type: 'circle',
@@ -253,8 +254,8 @@
 				paint: {
 					'circle-radius': 10,
 					'circle-color': '#ffffff',
-					'circle-stroke-color': '#1c1917',
-					'circle-stroke-width': 2
+					'circle-stroke-color': '#15803d',
+					'circle-stroke-width': 2.5
 				}
 			});
 
@@ -266,19 +267,19 @@
 				paint: {
 					'circle-radius': 6,
 					'circle-color': '#ffffff',
-					'circle-stroke-color': '#1c1917',
-					'circle-stroke-width': 1.5
+					'circle-stroke-color': '#16a34a',
+					'circle-stroke-width': 2
 				}
 			});
 
-			// 6c. Top 10 — center dot
+			// 6c. Top 10 — green center dot
 			m.addLayer({
 				id: 'top10-dot',
 				type: 'circle',
 				source: 'top10',
 				paint: {
 					'circle-radius': 3,
-					'circle-color': '#1c1917'
+					'circle-color': '#15803d'
 				}
 			});
 
@@ -392,10 +393,16 @@
 	<div class="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-3 text-xs pointer-events-none max-w-[200px]">
 		<h4 class="font-serif font-semibold text-sm mb-2 text-ink">SENSOR PLACEMENT</h4>
 		<div class="flex items-center gap-2 mb-1">
-			<span class="inline-block w-4 h-4 rounded-full border-2 border-ink bg-white flex-shrink-0 relative">
-				<span class="absolute inset-1 bg-ink rounded-full"></span>
+			<span class="inline-block w-4 h-4 rounded-full border-2 border-green-600 bg-white flex-shrink-0 relative">
+				<span class="absolute inset-1 bg-green-600 rounded-full"></span>
 			</span>
 			<span>Recommended site</span>
+		</div>
+		<div class="flex items-center gap-2 mb-1">
+			<span class="inline-block w-4 h-4 rounded-full border-2 border-green-700 bg-white flex-shrink-0 relative">
+				<span class="absolute inset-1 bg-green-700 rounded-full"></span>
+			</span>
+			<span class="text-[10px] text-red-600 font-semibold">● pulse = top 10 urgent</span>
 		</div>
 		<div class="flex items-center gap-2 mb-3">
 			<span class="inline-block w-3 h-3 rounded-full bg-blue-500 border border-white flex-shrink-0"></span>
@@ -404,8 +411,20 @@
 
 		<h4 class="font-serif font-semibold text-sm mb-2 text-ink">RISK (unmonitored)</h4>
 		<div class="flex items-center gap-2 mb-1">
-			<span class="inline-block w-4 h-3 rounded-sm flex-shrink-0" style="background: linear-gradient(to right, #dc2626, #f59e0b)"></span>
-			<span>High → Lower priority</span>
+			<span class="inline-block w-3 h-3 rounded-sm flex-shrink-0" style="background: #dc2626"></span>
+			<span>Super urgent (top 10)</span>
+		</div>
+		<div class="flex items-center gap-2 mb-1">
+			<span class="inline-block w-3 h-3 rounded-sm flex-shrink-0" style="background: #ea580c"></span>
+			<span>Urgent (11–30)</span>
+		</div>
+		<div class="flex items-center gap-2 mb-1">
+			<span class="inline-block w-3 h-3 rounded-sm flex-shrink-0" style="background: #f59e0b"></span>
+			<span>Elevated (31–60)</span>
+		</div>
+		<div class="flex items-center gap-2 mb-1">
+			<span class="inline-block w-3 h-3 rounded-sm flex-shrink-0" style="background: #fbbf24"></span>
+			<span>Moderate (61+)</span>
 		</div>
 
 		{#if layerState.showConfidence}
