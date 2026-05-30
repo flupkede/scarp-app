@@ -74,7 +74,6 @@
 			container: mapContainer,
 			style: {
 				version: 8,
-				glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
 				sources: {
 					'esri-topo': {
 						type: 'raster',
@@ -302,7 +301,6 @@
 				source: 'top10',
 				layout: {
 					'text-field': ['concat', '#', ['to-string', ['get', 'rank']]],
-					'text-font': ['Noto Sans Regular'],
 					'text-size': 12,
 					'text-offset': [0, 1.8],
 					'text-anchor': 'top',
