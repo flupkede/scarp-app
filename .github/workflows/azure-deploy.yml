@@ -5,6 +5,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Prevent simultaneous deploys; cancel any in-progress run for the same branch.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ── Job 1: Build SvelteKit static site → Azure Static Web App ───────────────
   deploy-frontend:
@@ -72,6 +77,8 @@ jobs:
           # Install project + all deps (single-sourced from pyproject.toml) into a flat
           # layout that App Service Oryx can pick up. No manual dep list to drift.
           uv pip install --target ./deploy_pkg .
+          # Include processed GeoJSON data — backend reads these at runtime.
+          cp -r ../data/processed ./deploy_pkg/data/
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
