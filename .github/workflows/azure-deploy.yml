@@ -46,9 +46,6 @@ jobs:
         run: pnpm build
 
       - name: Stage SWA config into build output
-        # With skip_app_build + app_location=frontend/build, SWA reads
-        # staticwebapp.config.json from the build root. Copy it in so
-        # navigationFallback (SPA deep-links) and headers take effect.
         run: cp staticwebapp.config.json frontend/build/staticwebapp.config.json
 
       - name: Deploy to Azure Static Web Apps
@@ -57,7 +54,7 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
-          app_location: frontend/build  # pre-built by pnpm; skip_app_build requires pointing here
+          app_location: frontend/build
           output_location: ""
           skip_app_build: true
           skip_api_build: true
@@ -80,21 +77,25 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install uv
-        run: pip install uv
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('backend/pyproject.toml') }}
+          restore-keys: pip-
 
       - name: Package backend for deployment
         run: |
           mkdir -p deploy_pkg
 
-          # Pre-install all deps + the scarp package into the zip root.
+          # Pre-install all deps from pyproject.toml into the zip root.
           # WEBSITE_RUN_FROM_PACKAGE=1 mounts this zip as-is; no server-side
-          # pip install happens, so everything must be bundled here.
-          # Install from backend/pyproject.toml so the dependency list never
-          # drifts from the declared deps (slowapi, gunicorn, etc.).
+          # pip install runs. Installing from ./backend ensures declared deps
+          # (slowapi, gunicorn, etc.) are always bundled — no drift.
           pip install --target deploy_pkg --no-cache-dir ./backend
 
-          # Copy the scarp package source alongside the installed deps.
+          # Overwrite the installed scarp package with the live source tree
+          # so edits to src/scarp/ are always reflected without a reinstall.
           cp -r backend/src/scarp deploy_pkg/scarp
 
           # Include processed GeoJSON data — backend reads these at runtime.
@@ -111,4 +112,6 @@ jobs:
             --name scarp-api \
             --src-path backend-deploy.zip \
             --type zip \
-            --async false
+            --async true
+          echo "Deployment triggered. Container will warm up in ~60s."
+          echo "Live: https://scarp.dsoft.services"
