@@ -45,6 +45,9 @@ Thumbs.db
 # Dev environment
 .dev-logs/
 
+# Plans (archived, not shipped)
+.plans/
+
 # IDE
 .vscode/
 .idea/
