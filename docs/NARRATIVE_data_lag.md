@@ -66,4 +66,4 @@ Even this framing must not overclaim. The honest statement is "the documented-sl
 
 ## Also reinforces the confidence layer
 
-This pairs with the grey data-gap layer: Tracy Arm (recent-event gap) and Lituya/Taan (no-DEM gap) are different KINDS of data limitation, both shown honestly. Together they tell one story: public data is patchy, and Scarp makes the patchiness visible instead of papering over it.
+This pairs with the grey data-gap layer. Tracy Arm is one kind of data limitation: a recent-event gap (the 2025 tsunami is absent from every inventory). The confidence layer shows another, broader kind: roughly three-quarters of the region's land area lacks the full set of public inputs. The well-studied fjords (Lituya, Taan, Tracy) are the covered exceptions; the unstudied slopes between them are where the record is thin. Together they tell one story: public data is patchy, and Scarp makes the patchiness visible instead of papering over it.

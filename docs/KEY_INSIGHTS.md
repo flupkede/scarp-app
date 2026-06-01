@@ -35,7 +35,7 @@ The standard statewide DGGS susceptibility raster (900m) marks the narrow fjords
 
 ## INSIGHT 4 — Honest data limits as a second finding
 
-Lituya Bay and Taan Fiord have no public DEM/susceptibility coverage. Their absence from the top is NOT "low risk" — it's "we're blind here." This becomes the confidence layer + an honest pitch line, and aligns with the Walden/Patton papers calling for better systematic data.
+The data-confidence layer measures how many public inputs are actually present across the region. The result: the famous, well-studied sites (Lituya Bay, Taan Fiord, Tracy Arm) are well-covered — but roughly three-quarters of the SE Alaska land area is data-limited. The grey overlay shows where a low score means "not enough data to judge," not "low risk." The well-known fjords are the exceptions; the unstudied slopes between them are where the public record runs thin. This is the second finding, and it aligns with the Walden/Patton papers calling for better systematic data.
 
 **Where to add:** already in ADDITION_confidence_layer.md; ensure it also lands in README "Honest limitations" and the pitch.
 

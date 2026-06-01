@@ -9,15 +9,17 @@
 |---|---|
 | Track | BUILDERS BATTLE |
 | Length | 2:00–3:00 (target **2:30**) |
-| Audio | **Own voice** voice-over (recorded), light royalty-free music bed under it |
-| Structure | Demo + story (hook → problem → demo → method → close) |
+| Format | **Hybrid:** talking-head intro (you, on camera, outdoors in Ghent) → screen-share demo (voice-over) → short talking-head close |
+| Intro audio | Recorded **live with the camera** — one take, NOT edited, NOT a separate voice-over. Just talk to camera. |
+| Demo audio | **Separate voice-over** (Audacity) laid over OBS screen clips |
+| Music bed | Light royalty-free, ducked under voice |
 | Visibility | YouTube **Unlisted** (link works for judges, not indexed publicly) |
 
 ## Judging-criteria mapping (keep these in mind while scripting)
 
 | Criterion | How the video earns it |
 |---|---|
-| Impact | Open with real megatsunamis (Lituya 1958, Tracy Arm 2025); state who it helps (Hig + others) |
+| Impact | Open with real megatsunamis (Lituya 1958 = 524 m, Tracy Arm Aug 2025 = 481 m, second-highest ever); state who it helps (Hig + others) |
 | Replicability | Show the explainable scoring breakdown in the zone detail panel; mention open data sources |
 | Creativity | The "where to put the next sensor" framing + mason-jar signature detail |
 | Vibes | Own voice, warm field-tool aesthetic, the 1958 wave fact, confident close |
@@ -47,33 +49,47 @@
 
 > Timestamps are targets. Bracketed `[SCREEN: …]` notes drive the shot list in §3.
 
-**[0:00–0:18] Hook**
-[SCREEN: splash — USGS Tracy Arm aerial (public domain), quote overlay, then fade to map]
-> "In 1958, a landslide in Lituya Bay, Alaska, made the highest wave ever recorded — 524 metres. In August 2025, a slide in Tracy Arm came within 50 metres of beating it. Nobody saw it coming."
+---
 
-**[0:18–0:45] Problem**
-[SCREEN: slow pan over Southeast Alaska map; known-slide markers fade in]
-> "Tsunamigenic landslides in Alaska have risen roughly tenfold in a decade — glaciers retreat, permafrost thaws, rain intensifies. Detection already exists. What doesn't exist is a map of *where to look next*. Geologist Hig Higman builds 300-dollar sensors in mason jars and installs them by hand. He can't be everywhere."
+### PART A — Talking-head intro (you, on camera, outdoors in Ghent)
+> Record this LIVE with the camera, one take, talking to the lens. Don't edit it, don't dub over it — the slight imperfection of a real person outdoors is the point. Aim ~40–50 s. If you fluff a line, just restart the whole take; pick the best one. Phone in landscape, propped steady, sun behind YOU (not behind the camera), wind at your back.
 
-**[0:45–1:00] The idea**
-[SCREEN: title card "Scarp — where the next sensor goes"]
-> "So we built Scarp: a prioritisation tool. Not a detector — a map that ranks where the next sensor should go."
+**[0:00–0:50] Intro — to camera**
+> "It's [thirty] degrees here in Ghent today — too hot for May. Exactly one year ago, that same warming collapsed a glacier onto a Swiss village called Blatten. The village was buried — but its three hundred people survived, because someone was monitoring the slope and got them out in time.
+>
+> Monitoring is the difference. And in Alaska, where retreating glaciers are dropping whole mountainsides into the sea, almost nobody is deciding *where* to watch next. In 1958, a slide in Lituya Bay made the highest wave ever recorded — 524 metres. Last August, Tracy Arm made the second-highest — 481 — in a fjord full of cruise ships, at half past five in the morning. Nobody saw it coming.
+>
+> A geologist called Hig Higman builds his own sensors, by hand, and installs them alone. He has no map telling him where the next one matters most. So I built one. It's called Scarp."
 
-**[1:00–1:50] Demo (the core)**
-[SCREEN: live app — zones heatmap; click a top zone; detail panel opens]
-> "Scarp scores every patch of Southeast Alaska on three things: susceptibility — steep slopes in weak rock near retreating glaciers; exposure — people, roads, ferries, tourism; and the coverage gap — where monitoring is missing today."
+---
+
+### PART B — Screen demo (voice-over over OBS clips)
+> This part is separate voice-over (Audacity) laid over screen recordings. Calm, clear, unhurried.
+
+**[0:50–1:05] The idea**
+[SCREEN: title card / app splash → map]
+> "Scarp is a prioritisation tool. Not a detector — a map that ranks where the next monitoring sensor should go."
+
+**[1:05–1:55] Demo (the core)**
+[SCREEN: live app — candidate points on the map; click a top site; detail panel opens]
+> "It scores every patch of Southeast Alaska on what matters: susceptibility — steep, weak rock near retreating glaciers; a fjord-wall signal — a steep face dropping straight into deep water; exposure — people, roads, ferries, tourism; and the coverage gap — where there's no monitoring today."
 [SCREEN: zone detail panel — score breakdown components]
-> "Every score is explainable. Click a zone and you see exactly why it ranks: each factor, broken out. No black box."
-[SCREEN: type a natural-language search, results filter]
-> "Ask it in plain language — 'high-risk zones near tourist routes with no monitoring' — and it filters the map and tells you why."
+> "Every score is explainable. Click a site and you see exactly why it ranks — each factor, broken out. No black box."
+[SCREEN: type a plain-English search, results filter]
+> "Ask it in plain English — 'high-risk sites near tourist routes with no monitoring' — and it filters the map and tells you why."
+[SCREEN: toggle the grey data-confidence layer ON]
+> "And here's the honest part. The grey shows where public data is too thin to judge — about three-quarters of the region. The famous fjords, we can see. It's everything between them we can't. That grey isn't safety — it's the gap the science says we have."
 
-**[1:50–2:10] Validation**
-[SCREEN: top-10 list; highlight Barry Arm / Lituya / Portage]
-> "Our top ranked zones land on the places experts already worry about — Barry Arm, Lituya Bay — without us hard-coding them. The method finds them on its own."
+**[1:55–2:15] Validation**
+[SCREEN: find Barry Arm; show it ranking low with the "already monitored" note]
+> "And it's honest about what it finds. Barry Arm — the slide that triggered a federal preparedness act — ranks low, on purpose, because it already has a sensor. Scarp doesn't find dangerous places. It finds places that are dangerous *and* unwatched. That's the whole point."
 
-**[2:10–2:30] Close**
-[SCREEN: mason-jar marker on map; then GitHub repo + URL on screen]
-> "Hig has 300-dollar mason-jar sensors and no map of where to put them next. Now he does. It's open source, built on public USGS and Alaska state data, with no secrets in the repo. Scarp."
+---
+
+### PART C — Talking-head close (you, on camera — optional, can also be voice-over over the repo)
+**[2:15–2:30] Close**
+[SCREEN: you to camera, OR mason-jar marker → GitHub repo + URL on screen]
+> "Hig has cheap sensors and an infinite coastline. Now he has a map. It's open source, built entirely on public USGS and Alaska data, with no secrets in the repo. And the same method works for the Alps, the Himalayas — anywhere a warming world is turning mountains into hazards. That's Scarp."
 
 ---
 
@@ -86,10 +102,12 @@ Build/deploy the app first (Phase 4 done), then capture:
 3. **Known slides layer** — toggle slides markers on.
 4. **Zone click** — click a #1–3 ranked zone; detail/"field notebook" panel slides in.
 5. **Score breakdown** — scroll the component breakdown in the panel.
-6. **Search demo** — type the NL query; show map filtering + explanation text.
-7. **Priority list** — sidebar top-10; click an item → flyTo animation.
-8. **Mason-jar markers** — toggle stations layer (signature detail).
-9. **Repo shot** — GitHub repo page + the live URL in the address bar.
+6. **Search demo** — type the plain-English query; show map filtering + explanation text.
+7. **Confidence layer** — toggle the grey data-confidence overlay ON; show how much of the region is grey.
+8. **Barry Arm** — find Barry Arm in the list / on the map; show it ranking low with the "already monitored" note in the detail panel.
+9. **Priority list** — sidebar top-10; click an item → flyTo animation.
+10. **Mason-jar markers** — toggle stations layer (signature detail).
+11. **Repo shot** — GitHub repo page (github.com/flupkede/scarp-app) + the live URL (scarp.dsoft.services) in the address bar.
 
 Record each clip 2–3× so the editor has options. Keep the cursor calm and deliberate.
 
@@ -113,7 +131,7 @@ Record each clip 2–3× so the editor has options. Keep the cursor calm and del
 - **Description:**
   ```
   Scarp ranks where the next tsunamigenic-landslide monitoring sensor should go in Southeast Alaska.
-  Built for [hackathon]. Open source: https://github.com/flupkede/scarp
+  Built for North Star AI hackathon. Live: https://scarp.dsoft.services — Open source: https://github.com/flupkede/scarp-app
   Data: USGS, Alaska DGGS (public domain). Inspired by geologist Hig Higman / Ground Truth Alaska.
   ```
 - Copy the watch URL → that goes in the Submit form's **YouTube URL** field.

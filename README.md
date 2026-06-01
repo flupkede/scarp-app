@@ -81,29 +81,29 @@ Why this design matters:
 ```mermaid
 graph LR
     subgraph "Data Sources (public)"
-        A[USGS 90m DEM\nSusceptibility]
-        B[DGGS Inventory\n~40k slides]
-        C[OSM Alaska\nExposure]
-        D[AEC Stations\nMonitoring gap]
+        A["USGS 90m DEM<br>Susceptibility"]
+        B["DGGS Inventory<br>~40k slides"]
+        C["OSM Alaska<br>Exposure"]
+        D["AEC Stations<br>Monitoring gap"]
     end
 
     subgraph "Prep pipeline (one-shot)"
-        E[00_download.py]
-        F[10_normalize.py\nEPSG:3338]
-        G[20_slope.py]
-        H[50_score_zones.py\nLocal maxima]
+        E["00_download.py"]
+        F["10_normalize.py<br>EPSG:3338"]
+        G["20_slope.py"]
+        H["50_score_zones.py<br>Local maxima"]
     end
 
     subgraph "Backend (FastAPI)"
-        I[/api/zones]
-        J[/api/search\nLLM tool call]
-        K[/api/layers]
+        I["GET /api/zones"]
+        J["POST /api/search<br>LLM tool call"]
+        K["GET /api/layers"]
     end
 
     subgraph "Frontend (SvelteKit + MapLibre)"
-        L[Map + heatmap]
-        M[Priority list]
-        N[Search bar]
+        L["Map + heatmap"]
+        M["Priority list"]
+        N["Search bar"]
     end
 
     A & B & C & D --> E --> F --> G --> H
