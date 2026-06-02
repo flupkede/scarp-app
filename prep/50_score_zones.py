@@ -173,14 +173,14 @@ def load_dem_and_relief(transform, rows, cols):
     return relief, dem_filled, elevation
 
 
-def load_volume_proxy(transform, rows, cols):
-    """Compute volume proxy = normalize(relief) × normalize(slope).
+def load_relief_normalized(transform, rows, cols):
+    """Load relief from 25_relief.py output and normalize 0-1.
 
-    Relief is loaded from the 25_relief.py output (100m EPSG:3338 raster).
-    Slope is computed inline from DEM elevation (same grid).
-    Both are normalised 0-1 using per-layer max, then multiplied.
+    Returns (relief_norm, relief_valid). Slope computation and the final
+    volume_proxy product (relief_norm × slope_norm) happen in main() to
+    avoid loading the DEM twice.
     """
-    print("  Computing volume proxy (relief × slope) ...")
+    print("  Loading relief raster (25_relief.py output) ...")
 
     # --- Load relief raster from 25_relief.py ---
     relief_path = INTERMEDIATE / "relief_3338.tif"
@@ -374,7 +374,7 @@ def main() -> None:
     # --- Load all layers ---
     suscept_norm, n10_valid = load_n10(transform, rows, cols)
     relief, dem_filled, elevation = load_dem_and_relief(transform, rows, cols)
-    relief_norm, relief_valid = load_volume_proxy(transform, rows, cols)
+    relief_norm, relief_valid = load_relief_normalized(transform, rows, cols)
     coast_dist_m = load_coast_distance(transform, rows, cols)
     proximity = compute_proximity(transform, rows, cols)
     coverage = load_coarse_layer(
