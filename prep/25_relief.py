@@ -26,7 +26,7 @@ INTERMEDIATE = DATA_PROC / "intermediate"
 TARGET_CRS = "EPSG:3338"
 TARGET_RES = 100          # metres — same as 20_slope.py
 TILE_MIN_BYTES = 1_000_000  # skip <1 MB stubs
-RELIEF_WINDOW_M = 500     # window radius for focal range (~scale of a landslide)
+RELIEF_WINDOW_M = 500     # window extent for focal range (~scale of a landslide)
 
 # Derived: window size in grid cells
 RELIEF_WINDOW_CELLS = max(1, round(RELIEF_WINDOW_M / TARGET_RES))
@@ -100,6 +100,10 @@ def merge_reprojected_tiles() -> tuple[np.ndarray, rasterio.Affine, np.ndarray]:
                     dst_crs=TARGET_CRS,
                     resampling=Resampling.bilinear,
                 )
+                # Handle source nodata value (e.g. USGS 3DEP uses -999999)
+                nodata_val = src.nodata
+                if nodata_val is not None and not np.isnan(nodata_val):
+                    tile_data[tile_data == nodata_val] = np.nan
             # Identify valid (non-NaN) pixels
             valid = ~np.isnan(tile_data)
             # Take max where overlapping
@@ -123,7 +127,7 @@ def merge_reprojected_tiles() -> tuple[np.ndarray, rasterio.Affine, np.ndarray]:
     return elevation, transform, nodata_mask
 
 
-def compute_relief(elevation: np.ndarray, nodata_mask: np.ndarray) -> np.ndarray:
+def compute_relief(elevation: np.ndarray) -> np.ndarray:
     """Local vertical relief = focal max − focal min over RELIEF_WINDOW_CELLS.
 
     NODATA cells are excluded from the focal operation (treated as NaN).
@@ -159,7 +163,7 @@ def main() -> None:
 
     print(f"\n  Computing relief (window={RELIEF_WINDOW_CELLS} cells ≈ "
           f"{RELIEF_WINDOW_CELLS * TARGET_RES}m) ...")
-    relief = compute_relief(elevation, nodata_mask)
+    relief = compute_relief(elevation)
 
     valid = ~np.isnan(relief)
     if valid.any():
