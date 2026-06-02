@@ -47,7 +47,7 @@ SE_BOUNDS_3338 = (-250000, 300000, 1226203, 1559983)
 W_SUSC = 0.25
 W_FJORD = 0.25
 W_PROX = 0.20
-W_SLOPE = 0.10
+W_VOLUME = 0.10
 W_EXPO = 0.10
 W_GAP = 0.10
 
@@ -173,28 +173,47 @@ def load_dem_and_relief(transform, rows, cols):
     return relief, dem_filled, elevation
 
 
-def load_slope_mask(transform, rows, cols):
-    """Rasterize steep slope polygons to 90m binary mask."""
-    print("  Loading steep slopes ...")
-    slope_path = INTERMEDIATE / "steep_slopes_3338.geojson"
-    if not slope_path.exists():
-        print("    ✗ steep_slopes not found (run 20_slope first)")
+def load_volume_proxy(transform, rows, cols):
+    """Compute volume proxy = normalize(relief) × normalize(slope).
+
+    Relief is loaded from the 25_relief.py output (100m EPSG:3338 raster).
+    Slope is computed inline from DEM elevation (same grid).
+    Both are normalised 0-1 using per-layer max, then multiplied.
+    """
+    print("  Computing volume proxy (relief × slope) ...")
+
+    # --- Load relief raster from 25_relief.py ---
+    relief_path = INTERMEDIATE / "relief_3338.tif"
+    if not relief_path.exists():
+        print("    ✗ relief_3338.tif not found (run 25_relief first)")
         return np.zeros((rows, cols), dtype=np.float32)
 
-    gdf = gpd.read_file(slope_path)
-    shapes_list = [(geom, 1.0) for geom in gdf.geometry if geom is not None and not geom.is_empty]
-    if not shapes_list:
-        return np.zeros((rows, cols), dtype=np.float32)
+    with rasterio.open(relief_path) as src:
+        relief = np.zeros((rows, cols), dtype=np.float32)
+        reproject(
+            source=rasterio.band(src, 1),
+            destination=relief,
+            src_transform=src.transform,
+            src_crs=src.crs,
+            dst_transform=transform,
+            dst_crs=TARGET_CRS,
+            resampling=Resampling.bilinear,
+        )
+    relief_valid = relief > 0
+    print(f"    Relief: {relief_valid.sum():,} valid cells, "
+          f"range 0–{relief[relief_valid].max():.0f} m")
 
-    slope_mask = rasterize(
-        shapes_list,
-        out_shape=(rows, cols),
-        transform=transform,
-        fill=0,
-        dtype="float32",
-    )
-    print(f"    Steep cells: {slope_mask.sum():,}")
-    return slope_mask
+    # Normalise relief 0-1
+    relief_max = relief[relief_valid].max() if relief_valid.any() else 1.0
+    relief_norm = np.where(relief_valid, relief / max(relief_max, 1e-9), 0).astype(np.float32)
+
+    # --- Compute slope from the in-memory elevation grid ---
+    # (already loaded by load_dem_and_relief above — we need elevation as arg)
+    # Since elevation is computed inside load_dem_and_relief and returned,
+    # we compute slope here using the same grid parameters.
+    # To avoid loading DEM twice, slope is computed inline in main() below.
+    # This function returns the relief part; main() combines with slope.
+    return relief_norm, relief_valid
 
 
 def load_coast_distance(transform, rows, cols):
@@ -355,7 +374,7 @@ def main() -> None:
     # --- Load all layers ---
     suscept_norm, n10_valid = load_n10(transform, rows, cols)
     relief, dem_filled, elevation = load_dem_and_relief(transform, rows, cols)
-    slope = load_slope_mask(transform, rows, cols)
+    relief_norm, relief_valid = load_volume_proxy(transform, rows, cols)
     coast_dist_m = load_coast_distance(transform, rows, cols)
     proximity = compute_proximity(transform, rows, cols)
     coverage = load_coarse_layer(
@@ -368,22 +387,38 @@ def main() -> None:
     # --- Compute scoring components ---
     print("\n  Computing score ...")
 
-    # Fjord wall: relief × water proximity
+    # Fjord wall: relief × water proximity (uses in-memory relief from DEM)
     fjord_wall = (
         np.clip(relief / 500.0, 0, 1)
         * np.clip(1.0 - coast_dist_m / 5000.0, 0, 1)
     )
     fjord_wall[~dem_filled] = 0
 
+    # Compute slope from in-memory elevation for volume proxy
+    dy, dx = np.gradient(elevation, float(CELL_SIZE))
+    slope_deg = np.degrees(np.arctan(np.sqrt(dx**2 + dy**2)))
+    slope_deg[~dem_filled] = 0
+    slope_valid = slope_deg > 0
+    slope_max = slope_deg[slope_valid].max() if slope_valid.any() else 1.0
+    slope_norm = np.where(slope_valid, slope_deg / max(slope_max, 1e-9), 0).astype(np.float32)
+
+    # Volume proxy: normalized relief × normalized slope
+    volume_proxy = (relief_norm * slope_norm).astype(np.float32)
+    volume_proxy[~dem_filled] = 0
+    vp_valid = volume_proxy > 0
+    print(f"    Volume proxy: {vp_valid.sum():,} non-zero, "
+          f"range 0–{volume_proxy[vp_valid].max():.4f}" if vp_valid.any() else
+          "    Volume proxy: all zeros")
+
     # Valid land mask
     valid = n10_valid & dem_filled
 
-    # Weighted-additive score
+    # Weighted-additive score (slope_factor replaced by volume_proxy)
     score = (
         W_SUSC * suscept_norm
         + W_FJORD * fjord_wall
         + W_PROX * proximity
-        + W_SLOPE * slope
+        + W_VOLUME * volume_proxy
         + W_EXPO * exposure
         + W_GAP * (1.0 - coverage)
     )
@@ -465,7 +500,7 @@ def main() -> None:
         components = {
             "susceptibility": round(float(suscept_norm[r, c]), 3),
             "fjord_wall": round(float(fjord_wall[r, c]), 3),
-            "slope_factor": round(float(slope[r, c]), 3),
+            "volume_proxy": round(float(volume_proxy[r, c]), 3),
             "proximity": round(float(proximity[r, c]), 3),
             "exposure": round(float(exposure_norm[r, c]), 3),
             "coverage": round(float(coverage[r, c]), 3),
@@ -529,7 +564,7 @@ def main() -> None:
             "crs": TARGET_CRS,
             "weights": {
                 "susceptibility": W_SUSC, "fjord_wall": W_FJORD,
-                "proximity": W_PROX, "slope": W_SLOPE,
+                "proximity": W_PROX, "volume_proxy": W_VOLUME,
                 "exposure": W_EXPO, "gap": W_GAP,
             },
             "max_candidates": MAX_CANDIDATES,
