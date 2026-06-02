@@ -16,7 +16,7 @@
 		{ key: 'susceptibility', label: 'Susceptibility', value: components.susceptibility },
 		{ key: 'fjord_wall', label: 'Fjord wall', value: components.fjord_wall },
 		{ key: 'proximity', label: 'Proximity', value: components.proximity },
-		{ key: 'slope_factor', label: 'Steep slope', value: components.slope_factor },
+		{ key: 'volume_proxy', label: 'Volume potential', value: components.volume_proxy },
 		{ key: 'exposure', label: 'Exposure', value: components.exposure },
 		{ key: 'coverage', label: 'Coverage', value: components.coverage }
 	]);
