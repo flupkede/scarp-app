@@ -33,7 +33,7 @@ TARGET_CRS = "EPSG:3338"
 CELL_SIZE = 90
 COARSE_CELL_SIZE = 500
 RELIEF_SIZE = 11  # cells at 90m ≈ 1km window
-SLOPE_THRESHOLD = 25.0
+
 PROXIMITY_DECAY_KM = 5.0
 COVERAGE_BUFFER_M = 15_000
 COASTAL_MAX_DIST_KM = 15.0
@@ -186,7 +186,7 @@ def load_volume_proxy(transform, rows, cols):
     relief_path = INTERMEDIATE / "relief_3338.tif"
     if not relief_path.exists():
         print("    ✗ relief_3338.tif not found (run 25_relief first)")
-        return np.zeros((rows, cols), dtype=np.float32)
+        return np.zeros((rows, cols), dtype=np.float32), np.zeros((rows, cols), dtype=bool)
 
     with rasterio.open(relief_path) as src:
         relief = np.zeros((rows, cols), dtype=np.float32)

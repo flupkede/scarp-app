@@ -37,7 +37,7 @@ RULES — follow exactly:
 7. Vague queries → return top 20 by rank (max_rank=20).
 
 Zone properties: id, rank (1=highest risk), score (0-1), components:
-  susceptibility, fjord_wall, slope_factor, proximity, exposure, coverage, coast_dist_km.
+  susceptibility, fjord_wall, volume_proxy, proximity, exposure, coverage, coast_dist_km.
 Centroid lon/lat is in geometry.coordinates.
 
 After calling the tool, write ONE sentence explaining what you filtered for."""
