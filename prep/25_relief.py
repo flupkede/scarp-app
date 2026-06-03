@@ -24,7 +24,7 @@ DATA_PROC = REPO_ROOT / "data" / "processed"
 INTERMEDIATE = DATA_PROC / "intermediate"
 
 TARGET_CRS = "EPSG:3338"
-TARGET_RES = 100          # metres — same as 20_slope.py
+TARGET_RES = 100          # metres — DEM mosaic resolution
 TILE_MIN_BYTES = 1_000_000  # skip <1 MB stubs
 RELIEF_WINDOW_M = 500     # window extent for focal range (~scale of a landslide)
 

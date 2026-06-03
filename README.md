@@ -90,7 +90,7 @@ graph LR
     subgraph "Prep pipeline (one-shot)"
         E["00_download.py"]
         F["10_normalize.py<br>EPSG:3338"]
-        G["20_slope.py"]
+        G["25_relief.py"]
         H["50_score_zones.py<br>Local maxima"]
     end
 
@@ -184,7 +184,7 @@ The processed GeoJSON data (`data/processed/`) is committed to the repo — no d
 cd prep
 uv run python 00_download.py
 uv run python 10_normalize.py
-uv run python 20_slope.py
+uv run python 25_relief.py
 uv run python 30_exposure.py
 uv run python 40_monitoring_mask.py
 uv run python 50_score_zones.py
