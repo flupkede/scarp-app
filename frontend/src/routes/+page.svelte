@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import { getZoneStore } from '$lib/stores/zones.svelte';
 	import { fetchZones, fetchSlides, fetchStations, fetchConfidence, type ZoneFeature } from '$lib/api';
@@ -22,9 +21,8 @@
 	let dataReady = $state(false);
 	let dataError = $state<string | null>(null);
 
-	// Splash
+	// Splash — only show while data is loading
 	let showSplash = $state(true);
-	const skipSplash = browser && new URLSearchParams(window.location.search).has('nosplash');
 
 	// Selected site
 	let selectedSite = $state<ZoneFeature | null>(null);
@@ -56,8 +54,6 @@
 	});
 
 	onMount(async () => {
-		if (skipSplash) showSplash = false;
-
 		try {
 			// Load data from API
 			const [zones, slides, stations, confidence] = await Promise.all([
@@ -295,7 +291,7 @@
 	</div>
 </div>
 
-<!-- Splash overlay -->
-{#if showSplash && !skipSplash}
-	<Splash onDismiss={() => (showSplash = false)} />
+<!-- Splash overlay — only visible while loading -->
+{#if showSplash}
+	<Splash {dataReady} onDismiss={() => (showSplash = false)} />
 {/if}
