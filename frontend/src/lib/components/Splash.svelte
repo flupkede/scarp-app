@@ -40,8 +40,19 @@
 				? 'splash-out'
 				: 'splash-in'}"
 	>
-		<!-- Dark solid background -->
-		<div class="absolute inset-0 bg-stone-900"></div>
+		<!-- Background image — USGS Tracy Arm aerial (public domain) -->
+		<div
+			class="absolute inset-0 bg-cover bg-center"
+			style="background-image: url('/splash-tracy-arm.jpg'); background-color: #1c1917;"
+		>
+			<!-- Dark gradient overlay for text readability -->
+			<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/30"></div>
+		</div>
+
+		<!-- Photo credit -->
+		<div class="absolute bottom-3 left-4 text-[10px] text-white/30 z-10">
+			Photo: USGS, Public Domain
+		</div>
 
 		<!-- Content: centered, elegant -->
 		<div class="relative z-10 text-center px-8 max-w-xl">
