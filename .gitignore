@@ -51,3 +51,7 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Hidden directories (at any level)
+.*/
+**/.*/
