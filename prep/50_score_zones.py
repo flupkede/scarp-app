@@ -174,19 +174,18 @@ def load_dem_and_relief(transform, rows, cols):
 
 
 def load_relief_normalized(transform, rows, cols):
-    """Load relief from 25_relief.py output and normalize 0-1.
+    """Load the relief raster (25_relief.py output) and normalize it to 0-1.
 
-    Returns (relief_norm, relief_valid). Slope computation and the final
-    volume_proxy product (relief_norm × slope_norm) happen in main() to
-    avoid loading the DEM twice.
+    Returns relief_norm. The slope grid and the final volume_proxy product
+    (relief_norm × slope_norm) are computed in main() from the in-memory
+    elevation grid, so the DEM is only loaded once.
     """
     print("  Loading relief raster (25_relief.py output) ...")
 
-    # --- Load relief raster from 25_relief.py ---
     relief_path = INTERMEDIATE / "relief_3338.tif"
     if not relief_path.exists():
         print("    ✗ relief_3338.tif not found (run 25_relief first)")
-        return np.zeros((rows, cols), dtype=np.float32), np.zeros((rows, cols), dtype=bool)
+        return np.zeros((rows, cols), dtype=np.float32)
 
     with rasterio.open(relief_path) as src:
         relief = np.zeros((rows, cols), dtype=np.float32)
@@ -207,13 +206,7 @@ def load_relief_normalized(transform, rows, cols):
     relief_max = relief[relief_valid].max() if relief_valid.any() else 1.0
     relief_norm = np.where(relief_valid, relief / max(relief_max, 1e-9), 0).astype(np.float32)
 
-    # --- Compute slope from the in-memory elevation grid ---
-    # (already loaded by load_dem_and_relief above — we need elevation as arg)
-    # Since elevation is computed inside load_dem_and_relief and returned,
-    # we compute slope here using the same grid parameters.
-    # To avoid loading DEM twice, slope is computed inline in main() below.
-    # This function returns the relief part; main() combines with slope.
-    return relief_norm, relief_valid
+    return relief_norm
 
 
 def load_coast_distance(transform, rows, cols):
@@ -374,7 +367,7 @@ def main() -> None:
     # --- Load all layers ---
     suscept_norm, n10_valid = load_n10(transform, rows, cols)
     relief, dem_filled, elevation = load_dem_and_relief(transform, rows, cols)
-    relief_norm, relief_valid = load_relief_normalized(transform, rows, cols)
+    relief_norm = load_relief_normalized(transform, rows, cols)
     coast_dist_m = load_coast_distance(transform, rows, cols)
     proximity = compute_proximity(transform, rows, cols)
     coverage = load_coarse_layer(
