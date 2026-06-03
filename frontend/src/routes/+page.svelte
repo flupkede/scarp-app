@@ -27,6 +27,16 @@
 	// Sidebar toggle for mobile
 	let sidebarOpen = $state(false);
 
+	// Global Escape listener for sidebar overlay
+	$effect(() => {
+		if (!sidebarOpen) return;
+		function onKey(e: KeyboardEvent) {
+			if (e.key === 'Escape') sidebarOpen = false;
+		}
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	});
+
 	// Selected site
 	let selectedSite = $state<ZoneFeature | null>(null);
 	let selectedNearbySlides = $state<any[]>([]);
@@ -144,6 +154,7 @@
 	}
 
 	function handleSelectSite(id: string) {
+		sidebarOpen = false;
 		const site = allSites.find((f) => f.properties.id === id);
 		if (site) {
 			selectedSite = site;
@@ -261,14 +272,12 @@
 		{:else}
 			<!-- Mobile backdrop -->
 			{#if sidebarOpen}
-				<div
-					class="fixed inset-0 bg-black/40 z-20 sm:hidden"
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<button
+					class="fixed inset-0 bg-black/40 z-20 sm:hidden cursor-default"
 					onclick={() => (sidebarOpen = false)}
-					onkeydown={(e) => e.key === 'Escape' && (sidebarOpen = false)}
-					role="button"
-					tabindex="-1"
 					aria-label="Close menu"
-				></div>
+				></button>
 			{/if}
 
 			<!-- Sidebar: fixed overlay on mobile, inline on desktop -->
@@ -286,7 +295,7 @@
 					onClear={handleClearSearch}
 				/>
 				<div class="flex-1 overflow-hidden">
-					<PriorityList sites={allSites} onSelect={(id) => { handleSelectSite(id); sidebarOpen = false; }} />
+					<PriorityList sites={allSites} onSelect={handleSelectSite} />
 				</div>
 				<LayerToggle {layerState} hasConfidence={confidenceData !== null} />
 			</aside>
