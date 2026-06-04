@@ -51,12 +51,13 @@ Five public datasets, one ranked list:
 | Signal | Dataset | What it captures |
 |--------|---------|-----------------|
 | **Susceptibility** | USGS 90 m model (Mirus et al. 2024) | Terrain stability from DEM physics |
+| **Fjord wall** | DEM relief × water proximity | Steep fjord cliffs where tsunamigenic slides initiate |
+| **Volume potential** | DEM relief × slope (500 m window) | Height × steepness — proxy for failure volume |
 | **Proximity** | DGGS landslide inventory (~40 k features) | Distance to known past failures |
-| **Slope** | USGS 3DEP 10 m DEM | Steep faces most likely to release |
 | **Exposure** | OpenStreetMap Alaska | Buildings, roads, ferry routes, tourism |
 | **Monitoring gap** | Alaska Earthquake Center station network | Where sensors are *absent* |
 
-Scoring: a weighted-additive formula (no signal zeros out others) → local-maxima detection → top 120 ranked points. Each point carries a score breakdown and the set of known slides within 20 km.
+Scoring: a weighted-additive formula with 6 signals (susceptibility 0.25, fjord wall 0.25, proximity 0.20, volume proxy 0.10, exposure 0.10, coverage 0.10) — no single signal zeros out others → local-maxima detection → top 120 ranked points. Each point carries a score breakdown and the set of known slides within 20 km.
 
 The natural-language search (`POST /api/search`) routes your query through an LLM (GLM 4.7 Flash via DeepInfra) which calls a `filter_zones` tool and returns a filtered subset with an explanation.
 

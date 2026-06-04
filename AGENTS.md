@@ -118,6 +118,17 @@ cd frontend && pnpm install && pnpm dev  # → localhost:5173
 
 ---
 
+## Azure deployment
+
+- **Subscription:** `Visual Studio Professional with MSDN` (`c8438481-2fd9-4880-9bec-d8f4f426eae8`)
+- **Resource group:** `scarp`
+- **Static Web App:** `scarp-web` (frontend)
+- **App Service:** `scarp-api` (backend, B1 Linux)
+- **Before deploying:** `az account set --subscription c8438481-2fd9-4880-9bec-d8f4f426eae8`
+- **Deploy command:** `.\dev.ps1 deploy` (or `deploy-fe` / `deploy-be` for individual)
+
+---
+
 ## Execution rules
 
 - **One branch per phase**, commit + push at end

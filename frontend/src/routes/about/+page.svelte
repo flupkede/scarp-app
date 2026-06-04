@@ -46,11 +46,11 @@
 					</p>
 				</div>
 				<div class="bg-white/5 rounded-lg p-4 border border-white/10">
-					<h3 class="text-white font-semibold mb-1">2. Slope factor</h3>
+					<h3 class="text-white font-semibold mb-1">2. Volume potential</h3>
 					<p>
-						DEM-derived slope from USGS 3DEP 1/3 arc-second elevation data. Cells &gt;25&deg; slope
-						receive a binary boost — steep fjord walls are the primary failure surfaces for
-						tsunamigenic landslides.
+						DEM-derived relief (500 m focal window) × slope from USGS 3DEP elevation data, both
+						normalized 0–1 and multiplied. Steep, high-relief fjord walls produce the largest
+						volume proxies — the primary failure surfaces for tsunamigenic landslides.
 					</p>
 				</div>
 				<div class="bg-white/5 rounded-lg p-4 border border-white/10">
@@ -79,10 +79,10 @@
 				<div class="bg-white/5 rounded-lg p-4 border border-white/10">
 					<h3 class="text-white font-semibold mb-1">Scoring &amp; ranking</h3>
 					<p>
-						Each 500 m cell: <code class="text-amber-300 bg-white/5 px-1 rounded">raw = susceptibility &times;
-						(1 + slope) &times; (1 + proximity) &times; (1 + exposure)</code>,
-						then <code class="text-amber-300 bg-white/5 px-1 rounded">gap = raw &times; (1 &minus; 0.8 &times; coverage)</code>.
-						Top-percentile cells clustered into contiguous zones; ranked by aggregate score.
+						Weighted-additive: each 500 m cell gets
+						<code class="text-amber-300 bg-white/5 px-1 rounded">0.25&times;susceptibility + 0.25&times;fjord_wall + 0.20&times;proximity + 0.10&times;volume_proxy + 0.10&times;exposure + 0.10&times;coverage</code>.
+						No single signal can zero out another.
+						Top-percentile cells clustered into contiguous zones via local-maxima detection; ranked by aggregate score.
 						Top 120 zones shown on this map.
 					</p>
 				</div>
@@ -94,7 +94,7 @@
 			<h2 class="text-xl font-semibold text-amber-400 mb-3">Data confidence</h2>
 			<p class="leading-relaxed text-stone-300">
 				The diagonal-hatch overlay shows areas where the input data is thinnest &mdash; fewer than 3 of the
-				5 scoring inputs have published coverage. The "low" band (heavier hatch) covers interior areas
+				6 scoring inputs have published coverage. The "low" band (heavier hatch) covers interior areas
 				with no susceptibility or DEM data; the "medium" band covers areas with partial data. Rankings in
 				these zones should be treated as provisional.
 			</p>
