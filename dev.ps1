@@ -407,10 +407,12 @@ function Deploy-Backend {
     #    declared deps (slowapi, gunicorn, etc.).
     Write-Label "  Installing dependencies into package..." "White"
     $pipArgs = @(
-        "install", "--target", $stageDir, "--no-cache-dir", $backendDir
+        "pip", "install", "--target", $stageDir, "--no-cache-dir",
+        "--python-version", "3.12", "--python-platform", "linux",
+        $backendDir
     )
-    & pip @pipArgs
-    if ($LASTEXITCODE -ne 0) { Write-Label "  pip install failed" "Red"; return $false }
+    & uv @pipArgs
+    if ($LASTEXITCODE -ne 0) { Write-Label "  uv pip install failed" "Red"; return $false }
 
     # 3. Copy app source + processed data into the package
     Copy-Item (Join-Path $backendDir "src\scarp") (Join-Path $stageDir "scarp") -Recurse -Force
