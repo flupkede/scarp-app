@@ -1,96 +1,92 @@
 <script lang="ts">
-	let { onDismiss }: { onDismiss: () => void } = $props();
+	/**
+	 * Loading-driven splash overlay.
+	 * Shows while data is being fetched, fades out when dataReady becomes true.
+	 * No timer — purely driven by the loading state of the app.
+	 */
+	let { dataReady, onDismiss }: { dataReady: boolean; onDismiss: () => void } = $props();
 
-	let visible = $state(true);
 	let fadeOut = $state(false);
+	let visible = $state(true);
 	const reducedMotion =
 		typeof window !== 'undefined'
 			? window.matchMedia('(prefers-reduced-motion: reduce)').matches
 			: false;
 
-	// Fade timing — fast in/out so the map reveals quickly.
-	const FADE_OUT_MS = 400; // whole overlay (photo + text) fades out together
-	const HOLD_MS = 2600; // reading time before auto-dismiss begins
+	const FADE_OUT_MS = 500;
 
-	function dismiss() {
-		if (fadeOut) return; // already dismissing
-		if (reducedMotion) {
-			visible = false;
-			onDismiss();
-		} else {
-			fadeOut = true;
-			setTimeout(() => {
+	// When dataReady flips to true, begin fade-out.
+	$effect(() => {
+		if (dataReady) {
+			if (reducedMotion) {
 				visible = false;
 				onDismiss();
-			}, FADE_OUT_MS);
+			} else {
+				fadeOut = true;
+				setTimeout(() => {
+					visible = false;
+					onDismiss();
+				}, FADE_OUT_MS);
+			}
 		}
-	}
-
-	// Auto-dismiss after the hold window.
-	setTimeout(dismiss, HOLD_MS);
+	});
 </script>
 
 {#if visible}
-	<!--
-		The ENTIRE overlay (background photo + gradient + content) fades in and out
-		as one layer via `.splash-root`, so the map underneath is revealed in a
-		smooth crossfade instead of the photo cutting away abruptly.
-	-->
 	<div
-		class="splash-root fixed inset-0 z-50 flex items-end justify-center pb-24 sm:pb-32 {reducedMotion
+		class="splash-root fixed inset-0 z-50 flex items-center justify-center {reducedMotion
 			? ''
 			: fadeOut
 				? 'splash-out'
 				: 'splash-in'}"
-		onclick={dismiss}
-		onkeydown={(e) => e.key === 'Escape' && dismiss()}
-		role="button"
-		tabindex="0"
 	>
-		<!-- Background image — USGS Tracy Arm aerial -->
+		<!-- Background image — USGS Tracy Arm aerial (public domain) -->
 		<div
 			class="absolute inset-0 bg-cover bg-center"
 			style="background-image: url('/splash-tracy-arm.jpg'); background-color: #1c1917;"
 		>
-			<!-- Dark gradient overlay -->
-			<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
-		</div>
-
-		<!-- Content -->
-		<div class="relative z-10 text-center px-6 max-w-2xl">
-			<h1 class="text-5xl sm:text-6xl font-serif font-extrabold text-white mb-6 tracking-wide">
-				SCARP
-			</h1>
-			<p class="text-base sm:text-lg text-white/90 font-serif italic leading-relaxed mb-2">
-				In 1958, Lituya Bay saw the highest wave ever recorded — 524 meters.
-			</p>
-			<p class="text-base sm:text-lg text-white/90 font-serif italic leading-relaxed mb-2">
-				In August 2025, Tracy Arm came within 50 meters of that record.
-			</p>
-			<p class="text-lg sm:text-xl font-bold text-amber-500 mb-6">Nobody saw it coming.</p>
-			<p class="text-xs text-white/40 uppercase tracking-widest">tap anywhere to continue</p>
+			<!-- Dark gradient overlay for text readability -->
+			<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/30"></div>
 		</div>
 
 		<!-- Photo credit -->
 		<div class="absolute bottom-3 left-4 text-[10px] text-white/30 z-10">
 			Photo: USGS, Public Domain
 		</div>
+
+		<!-- Content: centered, elegant -->
+		<div class="relative z-10 text-center px-8 max-w-xl">
+			<h1 class="text-5xl sm:text-6xl font-serif font-extrabold text-white mb-8 tracking-wide">
+				SCARP
+			</h1>
+			<p class="text-sm sm:text-base text-white/80 font-serif leading-relaxed mb-2">
+				Ranked monitoring-priority map for tsunamigenic landslides in Southeast Alaska.
+			</p>
+			<p class="text-sm sm:text-base text-white/80 font-serif leading-relaxed mb-8">
+				Identifying where a single sensor would save the most lives — using only public data.
+			</p>
+
+			<!-- Loading indicator -->
+			<div class="flex items-center justify-center gap-2 text-amber-500">
+				<div class="loading-dot animate-pulse">●</div>
+				<span class="text-sm font-medium uppercase tracking-widest">Loading</span>
+				<div class="loading-dot animate-pulse" style="animation-delay: 0.2s">●</div>
+			</div>
+		</div>
 	</div>
 {/if}
 
 <style>
-	/* Whole-overlay crossfade. The photo and text fade together so the map
-	   beneath is revealed smoothly. Fast timings for a snappy reveal. */
 	.splash-root {
 		will-change: opacity;
 	}
 
 	.splash-in {
-		animation: splashIn 0.35s ease-out both;
+		animation: splashIn 0.6s ease-out both;
 	}
 
 	.splash-out {
-		animation: splashOut 0.4s ease-in both;
+		animation: splashOut 0.5s ease-in both;
 		pointer-events: none;
 	}
 
@@ -110,5 +106,9 @@
 		to {
 			opacity: 0;
 		}
+	}
+
+	.loading-dot {
+		animation: pulse 1.5s ease-in-out infinite;
 	}
 </style>

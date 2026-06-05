@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import { getZoneStore } from '$lib/stores/zones.svelte';
 	import { fetchZones, fetchSlides, fetchStations, fetchConfidence, type ZoneFeature } from '$lib/api';
@@ -22,9 +21,21 @@
 	let dataReady = $state(false);
 	let dataError = $state<string | null>(null);
 
-	// Splash
+	// Splash — only show while data is loading
 	let showSplash = $state(true);
-	const skipSplash = browser && new URLSearchParams(window.location.search).has('nosplash');
+
+	// Sidebar toggle for mobile
+	let sidebarOpen = $state(false);
+
+	// Global Escape listener for sidebar overlay
+	$effect(() => {
+		if (!sidebarOpen) return;
+		function onKey(e: KeyboardEvent) {
+			if (e.key === 'Escape') sidebarOpen = false;
+		}
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	});
 
 	// Selected site
 	let selectedSite = $state<ZoneFeature | null>(null);
@@ -56,8 +67,6 @@
 	});
 
 	onMount(async () => {
-		if (skipSplash) showSplash = false;
-
 		try {
 			// Load data from API
 			const [zones, slides, stations, confidence] = await Promise.all([
@@ -145,6 +154,7 @@
 	}
 
 	function handleSelectSite(id: string) {
+		sidebarOpen = false;
 		const site = allSites.find((f) => f.properties.id === id);
 		if (site) {
 			selectedSite = site;
@@ -218,6 +228,21 @@
 	<!-- Header bar -->
 	<header class="h-11 flex items-center px-4 justify-between flex-shrink-0 z-50" style="background:#0f172a">
 		<div class="flex items-center gap-3">
+			{#if dataReady && !dataError}
+				<button
+					class="sm:hidden text-white/70 hover:text-white p-1 -ml-1"
+					onclick={() => (sidebarOpen = !sidebarOpen)}
+					aria-label="Toggle menu"
+				>
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+						{#if sidebarOpen}
+							<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+						{:else}
+							<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+						{/if}
+					</svg>
+				</button>
+			{/if}
 			<h1 class="text-white font-serif font-bold text-lg tracking-wide">SCARP</h1>
 			<span class="hidden sm:inline text-white/40 text-xs">Landslide sensor placement</span>
 		</div>
@@ -245,8 +270,23 @@
 				</div>
 			</div>
 		{:else}
-			<!-- Sidebar -->
-			<aside class="w-72 flex-shrink-0 bg-paper border-r border-stone-200 flex flex-col overflow-hidden z-20">
+			<!-- Mobile backdrop -->
+			{#if sidebarOpen}
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<button
+					class="fixed inset-0 bg-black/40 z-20 sm:hidden cursor-default"
+					onclick={() => (sidebarOpen = false)}
+					aria-label="Close menu"
+				></button>
+			{/if}
+
+			<!-- Sidebar: fixed overlay on mobile, inline on desktop -->
+			<aside
+				class="sidebar w-72 flex-shrink-0 bg-paper border-r border-stone-200 flex flex-col overflow-hidden z-20
+					fixed top-11 left-0 bottom-0 transition-transform duration-200
+					{sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+					sm:static sm:translate-x-0"
+			>
 				<SearchBar
 					onSearch={handleSearch}
 					loading={searchLoading}
@@ -295,7 +335,7 @@
 	</div>
 </div>
 
-<!-- Splash overlay -->
-{#if showSplash && !skipSplash}
-	<Splash onDismiss={() => (showSplash = false)} />
+<!-- Splash overlay — only visible while loading -->
+{#if showSplash}
+	<Splash {dataReady} onDismiss={() => (showSplash = false)} />
 {/if}

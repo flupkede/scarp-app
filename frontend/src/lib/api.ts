@@ -23,7 +23,7 @@ export interface ZoneFeature {
 		components: {
 			susceptibility: number;
 			fjord_wall: number;
-			slope_factor: number;
+			volume_proxy: number;
 			proximity: number;
 			exposure: number;
 			coverage: number;

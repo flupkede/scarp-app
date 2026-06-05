@@ -21,8 +21,8 @@ Source: *Lessons of a landslide detective* by Christian Elliott, National Geogra
 
 ## Implemented Features
 
-- **Data pipeline (prep/)** — 6 scripts: download → normalize EPSG:3338 → slope from DEM → exposure from OSM → monitoring mask from AEC stations → weighted-additive scoring with local-maxima detection
-- **Scoring engine** — weighted-additive (not multiplicative), 5 signals: susceptibility (USGS 90 m), slope (3DEP DEM), proximity to known slides (DGGS ~40k inventory), exposure (OSM buildings/roads/tourism), monitoring gap (AEC seismic stations)
+- **Data pipeline (prep/)** — 7 scripts: download → normalize EPSG:3338 → slope from DEM → relief from DEM → exposure from OSM → monitoring mask from AEC stations → weighted-additive scoring with local-maxima detection
+- **Scoring engine** — weighted-additive (not multiplicative), 6 signals: susceptibility (USGS 90 m), fjord wall (relief × water proximity), volume proxy (height × steepness, replaces redundant slope), proximity to known slides (DGGS ~40k inventory), exposure (OSM buildings/roads/tourism), monitoring gap (AEC seismic stations)
 - **Fjord-wall signal** — local relief × water proximity, prevents Anchorage suburbs from dominating
 - **Data-confidence layer** — shows where public inputs are thin; grey overlay + source badges in detail panel
 - **Backend API** — FastAPI: `GET /health`, `/api/zones`, `/api/zones/{id}`, `/api/layers/{slides|stations}`, `POST /api/search`
@@ -50,6 +50,7 @@ Source: *Lessons of a landslide detective* by Christian Elliott, National Geogra
 
 ## Key decisions
 
+- **Volume proxy replaces slope** — old `slope_factor` double-counted steepness (already in USGS susceptibility); replaced with `height × steepness` volume proxy per Higman feedback and Hermanns et al. 2026 Volume criterion
 - **Weighted-additive scoring** — multiplicative zeroed out remote fjords; additive lets each signal contribute independently
 - **USGS 90 m susceptibility** over DGGS 900 m — the coarse DGGS raster marks fjords (where slides happen) as NODATA
 - **Local-maxima detection** over density clustering — clustering produced meaningless mega-blobs
@@ -114,6 +115,17 @@ cd frontend && pnpm install && pnpm dev  # → localhost:5173
 ```powershell
 .\dev.ps1 start|stop|status|logs|restart
 ```
+
+---
+
+## Azure deployment
+
+- **Subscription:** `Visual Studio Professional with MSDN` (`c8438481-2fd9-4880-9bec-d8f4f426eae8`)
+- **Resource group:** `scarp`
+- **Static Web App:** `scarp-web` (frontend)
+- **App Service:** `scarp-api` (backend, B1 Linux)
+- **Before deploying:** `az account set --subscription c8438481-2fd9-4880-9bec-d8f4f426eae8`
+- **Deploy command:** `.\dev.ps1 deploy` (or `deploy-fe` / `deploy-be` for individual)
 
 ---
 

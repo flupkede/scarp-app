@@ -69,7 +69,7 @@ class TestZones:
         for key in (
             "susceptibility",
             "fjord_wall",
-            "slope_factor",
+            "volume_proxy",
             "proximity",
             "exposure",
             "coverage",

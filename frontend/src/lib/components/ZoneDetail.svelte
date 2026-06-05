@@ -16,7 +16,7 @@
 		{ key: 'susceptibility', label: 'Susceptibility', value: components.susceptibility },
 		{ key: 'fjord_wall', label: 'Fjord wall', value: components.fjord_wall },
 		{ key: 'proximity', label: 'Proximity', value: components.proximity },
-		{ key: 'slope_factor', label: 'Steep slope', value: components.slope_factor },
+		{ key: 'volume_proxy', label: 'Volume potential', value: components.volume_proxy },
 		{ key: 'exposure', label: 'Exposure', value: components.exposure },
 		{ key: 'coverage', label: 'Coverage', value: components.coverage }
 	]);
@@ -86,7 +86,7 @@
 	}
 </script>
 
-<div class="absolute top-0 right-0 h-full w-80 shadow-2xl z-40 flex flex-col overflow-hidden" style="background: rgba(255,255,255,0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-left: 1px solid rgba(255,255,255,0.3);">
+<div class="absolute top-0 right-0 h-full w-full sm:w-80 shadow-2xl z-40 flex flex-col overflow-hidden" style="background: rgba(255,255,255,0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-left: 1px solid rgba(255,255,255,0.3);">
 	<!-- Header -->
 	<div class="px-4 py-4 flex items-start justify-between" style="border-bottom: 1px solid rgba(120,113,108,0.15);">
 		<div>

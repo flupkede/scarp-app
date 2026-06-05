@@ -9,7 +9,7 @@ from pydantic import BaseModel
 class ZoneComponents(BaseModel):
     susceptibility: float
     fjord_wall: float
-    slope_factor: float
+    volume_proxy: float
     proximity: float
     exposure: float
     coverage: float
