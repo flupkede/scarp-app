@@ -45,6 +45,11 @@ Thumbs.db
 # Dev environment
 .dev-logs/
 
+# Glacier pipeline — large intermediate files
+glacier/data/raw/
+glacier/data/processed/*.parquet
+glacier/nul
+
 # Plans (archived, not shipped)
 .plans/
 
