@@ -76,15 +76,15 @@
 		(map.getSource('basemap') as any).setTiles(bm.tiles);
 	});
 
-	// --- Layer opacity ---
+	// --- Layer opacity (only when the layer is visible — avoids unnecessary style recalc) ---
 	$effect(() => {
-		if (!mapLoaded || !map) return;
+		if (!mapLoaded || !map || !layerState.showInfluence) return;
 		if (map.getLayer('zones-fill')) {
 			map.setPaintProperty('zones-fill', 'fill-opacity', layerState.zonesOpacity);
 		}
 	});
 	$effect(() => {
-		if (!mapLoaded || !map) return;
+		if (!mapLoaded || !map || !layerState.showGlacier) return;
 		if (map.getLayer('glacier-velocity-layer')) {
 			map.setPaintProperty('glacier-velocity-layer', 'circle-opacity', layerState.glacierOpacity);
 		}
@@ -118,12 +118,15 @@
 			style: {
 				version: 8,
 				sources: {
-					basemap: {
-						type: 'raster',
-						tiles: (BASEMAPS.find((b) => b.id === basemapId) ?? BASEMAPS[0]).tiles,
-						tileSize: 256,
-						attribution: (BASEMAPS.find((b) => b.id === basemapId) ?? BASEMAPS[0]).attribution
-					}
+					basemap: (() => {
+						const initialBm = BASEMAPS.find((b) => b.id === basemapId) ?? BASEMAPS[0];
+						return {
+							type: 'raster' as const,
+							tiles: initialBm.tiles,
+							tileSize: initialBm.tileSize,
+							attribution: initialBm.attribution
+						};
+					})()
 				},
 				layers: [
 					{

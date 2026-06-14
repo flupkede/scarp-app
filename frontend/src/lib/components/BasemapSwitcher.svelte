@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { BASEMAPS } from '$lib/basemaps';
+	import { BASEMAPS, DEFAULT_BASEMAP_ID } from '$lib/basemaps';
 
 	let {
-		currentId = 'esri-topo',
+		currentId = DEFAULT_BASEMAP_ID,
 		onSelect,
 	}: {
 		currentId?: string;
@@ -10,21 +10,24 @@
 	} = $props();
 
 	let open = $state(false);
+	let wrapperEl: HTMLDivElement;
 
 	const available = BASEMAPS.filter((b) => b.available);
 	let currentLabel = $derived(BASEMAPS.find((b) => b.id === currentId)?.shortName ?? 'Basemap');
+
+	// Close flyout when user clicks anywhere outside the wrapper element.
+	$effect(() => {
+		if (!open) return;
+		function handleClick(e: MouseEvent) {
+			if (wrapperEl && !wrapperEl.contains(e.target as Node)) open = false;
+		}
+		document.addEventListener('click', handleClick, true);
+		return () => document.removeEventListener('click', handleClick, true);
+	});
 </script>
 
-<div class="absolute bottom-8 right-4 z-10 text-xs select-none">
-	{#if open}
-		<!-- Click-outside backdrop -->
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<button
-			class="fixed inset-0 z-0 cursor-default"
-			onclick={() => (open = false)}
-			aria-label="Close basemap picker"
-		></button>
-	{/if}
+<div bind:this={wrapperEl} class="absolute bottom-8 right-4 z-10 text-xs select-none">
+	<!-- No backdrop needed — document listener handles click-outside -->
 
 	<!-- Flyout panel -->
 	{#if open}
