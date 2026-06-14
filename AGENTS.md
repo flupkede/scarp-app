@@ -16,6 +16,8 @@
 > Higman. The full scientific roadmap, hypotheses, methodology, data inventory
 > and collaboration brief live in **[`ROADMAP.md`](./ROADMAP.md)** — read that
 > for the science direction; this file stays the project/engineering reference.
+> Actionable, staged per-phase implementation plans live in
+> **[`PHASE_PLANS.md`](./PHASE_PLANS.md)** (Phase 1 is fully detailed).
 
 - **North star:** produce an actual annual probability with honest uncertainty
   (calibrated on Hig's N≈120 inventory), not a relative susceptibility score.
