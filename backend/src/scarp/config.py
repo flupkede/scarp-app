@@ -36,6 +36,12 @@ if not settings.llm_api_key:
         or os.getenv("ANTHROPIC_API_KEY", "")
     )
 
+# Scoring calibration status. The current rank/score is an uncalibrated
+# weighted-additive heuristic, NOT a probability. The roadmap target is a
+# Bayesian-calibrated annual probability with honest uncertainty (see ROADMAP.md).
+# Surfaced via the API so no consumer mistakes the score for a probability.
+CALIBRATION_STATUS = "uncalibrated_heuristic"
+
 # Parse CORS origins from comma-separated string
 CORS_ORIGINS = [
     origin.strip()

@@ -43,7 +43,7 @@
 <div class="flex flex-col h-full overflow-hidden">
 	<div class="px-4 py-3 border-b border-stone-200">
 		<h2 class="font-serif font-semibold text-lg text-ink">120 priority sites</h2>
-		<p class="text-xs text-stone-500 mt-0.5">Ranked by landslide + tsunami risk</p>
+		<p class="text-xs text-stone-500 mt-0.5">Ranked by an uncalibrated risk heuristic (provisional)</p>
 	</div>
 
 	<div class="flex-1 overflow-y-auto">
@@ -58,7 +58,10 @@
 					<span class="text-xs font-mono text-amber-700 font-bold w-8">
 						#{site.properties.rank}
 					</span>
-					<span class="text-sm font-semibold text-ink">
+					<span
+						class="text-sm font-semibold text-ink cursor-help"
+						title="Uncalibrated weighted-additive heuristic (0–1), not a probability. See About → methodology."
+					>
 						Score {site.properties.score.toFixed(3)}
 					</span>
 				</div>

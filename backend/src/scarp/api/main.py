@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from ..config import CORS_ORIGINS, llm_provider_label, settings
+from ..config import CALIBRATION_STATUS, CORS_ORIGINS, llm_provider_label, settings
 from .layers import router as layers_router
 from .ratelimit import limiter
 from .search import router as search_router
@@ -192,6 +192,7 @@ async def health(request: Request) -> dict[str, Any]:
     return {
         "status": "ok",
         "version": "0.1.0",
+        "calibration": CALIBRATION_STATUS,
         "zones_loaded": len(request.app.state.zones["features"]),
         "llm_provider": llm_provider_label(),
         "llm_model": settings.llm_model,

@@ -6,6 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 
+from ..config import CALIBRATION_STATUS
 from ..geo import haversine_km
 from .schemas import NearbySlide
 
@@ -57,7 +58,14 @@ async def get_zones(
     features.sort(key=lambda f: f["properties"]["rank"])
     features = features[:limit]
 
-    return {"type": "FeatureCollection", "features": features}
+    # `calibration` flags that score/rank are an uncalibrated heuristic, not a
+    # probability (see ROADMAP.md). Extra top-level key is ignored by the
+    # structural ZoneCollection type on the frontend.
+    return {
+        "type": "FeatureCollection",
+        "features": features,
+        "calibration": CALIBRATION_STATUS,
+    }
 
 
 @router.get("/{zone_id}")

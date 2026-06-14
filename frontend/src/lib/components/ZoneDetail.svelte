@@ -120,7 +120,7 @@
 	<div class="px-4 py-3 border-b border-stone-200 {isLowConfidence ? '' : 'mt-3'}">
 		<div class="grid grid-cols-3 gap-2 text-center">
 			<div>
-				<div class="text-xs text-stone-500 uppercase tracking-wide">Score</div>
+				<div class="text-xs text-stone-500 uppercase tracking-wide" title="Uncalibrated weighted-additive heuristic (0–1), not a probability.">Score</div>
 				<div class="text-lg font-bold {rankColor}">{site.properties.score.toFixed(3)}</div>
 			</div>
 			<div>
@@ -132,6 +132,9 @@
 				<div class="text-lg font-bold text-ink">{site.properties.influence_radius_km} km</div>
 			</div>
 		</div>
+		<p class="mt-2 text-[10px] text-stone-400 leading-snug text-center">
+			Uncalibrated heuristic — provisional ranking, not a probability.
+		</p>
 	</div>
 
 	<!-- Component breakdown -->
