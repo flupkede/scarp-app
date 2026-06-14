@@ -99,6 +99,22 @@ async def lifespan(app: FastAPI):
         app.state.glacier_velocity = None
         logger.info("Glacier velocity layer not found — serving empty")
 
+    # Load Hig inventory layers if available (graceful fallback — the inventory
+    # pipeline, prep/05_hig_inventory.py, may not have run yet)
+    for attr, filename in (
+        ("hig_landslides", "hig_landslides.geojson"),
+        ("hig_polygons", "hig_polygons.geojson"),
+        ("hig_survey_circles", "hig_survey_circles.geojson"),
+    ):
+        path = data_dir / filename
+        if path.exists():
+            layer = json.loads(path.read_text())
+            setattr(app.state, attr, layer)
+            logger.info("Loaded %s (%d features)", filename, len(layer["features"]))
+        else:
+            setattr(app.state, attr, None)
+            logger.info("%s not found — serving empty", filename)
+
     zones_count = len(app.state.zones["features"])
     slides_count = len(app.state.slides_features)
     stations_count = len(app.state.stations["features"])

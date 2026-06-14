@@ -55,3 +55,32 @@ async def get_glacier_velocity(request: Request):
             content={"detail": "Glacier velocity layer not yet generated"},
         )
     return data
+
+
+def _optional_layer(request: Request, attr: str, label: str):
+    """Serve an optional app.state layer, or 404 JSON when it isn't loaded."""
+    data = getattr(request.app.state, attr, None)
+    if data is None:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": f"{label} not yet generated"},
+        )
+    return data
+
+
+@router.get("/hig_landslides", response_model=None)
+async def get_hig_landslides(request: Request):
+    """Hig's curated landslide inventory (centroids) — data/processed/hig_landslides.geojson."""
+    return _optional_layer(request, "hig_landslides", "Hig landslide inventory")
+
+
+@router.get("/hig_polygons", response_model=None)
+async def get_hig_polygons(request: Request):
+    """Hig's mapped slide footprints (body/source/deposit) — data/processed/hig_polygons.geojson."""
+    return _optional_layer(request, "hig_polygons", "Hig landslide polygons")
+
+
+@router.get("/hig_survey_circles", response_model=None)
+async def get_hig_survey_circles(request: Request):
+    """Hig's survey circles (where he ground-truthed) — hig_survey_circles.geojson."""
+    return _optional_layer(request, "hig_survey_circles", "Hig survey circles")

@@ -35,6 +35,15 @@ def client():
         json.loads(glacier_path.read_text()) if glacier_path.exists() else None
     )
 
+    # Hig inventory layers (published by prep/05_hig_inventory.py)
+    for attr, fname in (
+        ("hig_landslides", "hig_landslides.geojson"),
+        ("hig_polygons", "hig_polygons.geojson"),
+        ("hig_survey_circles", "hig_survey_circles.geojson"),
+    ):
+        p = DATA_DIR / fname
+        setattr(app.state, attr, json.loads(p.read_text()) if p.exists() else None)
+
     return TestClient(app)
 
 
@@ -159,6 +168,30 @@ class TestLayers:
         props = data["features"][0]["properties"]
         assert "v_mean" in props
         assert "v_trend_m_yr_per_year" in props
+
+    def test_hig_landslides(self, client):
+        r = client.get("/api/layers/hig_landslides")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["type"] == "FeatureCollection"
+        assert len(data["features"]) == 1464
+        props = data["features"][0]["properties"]
+        assert "size_inclusion" in props
+        assert "landslide_type" in props
+
+    def test_hig_polygons(self, client):
+        r = client.get("/api/layers/hig_polygons")
+        assert r.status_code == 200
+        data = r.json()
+        assert len(data["features"]) == 1789
+        assert "role" in data["features"][0]["properties"]
+
+    def test_hig_survey_circles(self, client):
+        r = client.get("/api/layers/hig_survey_circles")
+        assert r.status_code == 200
+        data = r.json()
+        assert len(data["features"]) == 525
+        assert "reviewed" in data["features"][0]["properties"]
 
 
 class TestSearch:
