@@ -377,13 +377,18 @@
 			m.on('click', 'glacier-velocity-layer', (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
 				if (e.features && e.features.length > 0) {
 					const props = e.features[0].properties;
+					const vMean = Number(props.v_mean);
 					const trend = Number(props.v_trend_m_yr_per_year);
-					const dir = trend < 0 ? 'slowing' : trend > 0 ? 'accelerating' : 'steady';
+					const speedStr = Number.isFinite(vMean) ? `${vMean.toFixed(0)} m/yr` : 'n/a';
+					const trendStr = Number.isFinite(trend)
+						? `${trend > 0 ? '+' : ''}${trend.toFixed(2)} m/yr·yr ` +
+							`(${trend < 0 ? 'slowing' : trend > 0 ? 'accelerating' : 'steady'})`
+						: 'n/a';
 					new maplibregl.Popup({ offset: 5 }).setLngLat(e.lngLat)
 						.setHTML(
 							`<strong>${props.point_id}</strong><br/>` +
-							`Mean speed: ${Number(props.v_mean).toFixed(0)} m/yr<br/>` +
-							`Trend: ${trend > 0 ? '+' : ''}${trend.toFixed(2)} m/yr·yr (${dir})`
+							`Mean speed: ${speedStr}<br/>` +
+							`Trend: ${trendStr}`
 						).addTo(m);
 				}
 			});

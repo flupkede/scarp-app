@@ -49,6 +49,14 @@ The dominant risk factor for tsunamigenic landslides in SE Alaska.
 
 **Hig's assignment:** "Explore the ITS_LIVE data. Build tools to ingest and visualize it. Produce outputs that show the data in interesting ways."
 
+**Status (done):** ITS_LIVE ingestion + visualization shipped (`glacier/00–20`). Per-zone
+glacier context extracted (`glacier/30_enrich_zones.py`) and wired into Scarp as a
+scoring signal (`glacier/40_rerank_zones.py`, W_GLACIER=0.15), the API
+(`/api/layers/glacier_velocity` + per-zone glacier block), and the frontend (zone-detail
+panel + optional velocity layer). Robust velocity-trend regression (fixed a 1000× unit
+bug). **Still open:** episodic-retreat detection, post-1850-minimum flag, thinning data,
+glacier-reach segmentation, and the full Bayesian probabilistic model (Korup).
+
 ### 2. Topography
 
 - Slope, relief, aspect, convexity

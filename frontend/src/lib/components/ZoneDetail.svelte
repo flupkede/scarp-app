@@ -169,7 +169,7 @@
 					<div class="flex justify-between gap-2">
 						<span>Nearest active ice</span>
 						<span class="font-mono text-ink text-right">
-							{glacier.dist_to_active_ice_km}&nbsp;km
+							{glacier.dist_to_active_ice_km?.toFixed(1)}&nbsp;km
 						</span>
 					</div>
 				{/if}
