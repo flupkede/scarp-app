@@ -31,6 +31,7 @@ Usage:
 
 import json
 import math
+import shutil
 import sys
 from math import asin, cos, radians, sin, sqrt
 
@@ -43,6 +44,7 @@ from config import (
     GLACIER_POINTS_OF_INTEREST,
     GLACIER_PROXIMITY_DECAY_KM,
     GLACIER_SIGNAL_BASE,
+    GLACIER_VELOCITY_LAYER_FILE,
     SCARP_DATA,
     VELOCITY_SUMMARY_FILE,
     ZONE_GLACIER_PARAMS_FILE,
@@ -210,6 +212,11 @@ def main() -> None:
     params_path = DATA_PROCESSED / ZONE_GLACIER_PARAMS_FILE
     params_path.write_text(json.dumps(params_map, indent=2))
     print(f"  [ok] {ZONE_GLACIER_PARAMS_FILE}: {len(params_map)} entries")
+
+    # Publish the velocity points to the backend data dir as a map layer.
+    layer_path = SCARP_DATA / GLACIER_VELOCITY_LAYER_FILE
+    shutil.copyfile(DATA_PROCESSED / VELOCITY_SUMMARY_FILE, layer_path)
+    print(f"  [ok] {GLACIER_VELOCITY_LAYER_FILE}: published to {SCARP_DATA}")
 
     # --- Report ---
     print("\n" + "=" * 60)

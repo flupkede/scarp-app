@@ -86,6 +86,19 @@ async def lifespan(app: FastAPI):
         app.state.confidence = None
         logger.info("Confidence layer not found — serving empty")
 
+    # Load glacier velocity layer if available (graceful fallback — glacier
+    # pipeline may not have run yet)
+    glacier_velocity_path = data_dir / "glacier_velocity.geojson"
+    if glacier_velocity_path.exists():
+        app.state.glacier_velocity = json.loads(glacier_velocity_path.read_text())
+        logger.info(
+            "Loaded glacier velocity layer (%d points)",
+            len(app.state.glacier_velocity["features"]),
+        )
+    else:
+        app.state.glacier_velocity = None
+        logger.info("Glacier velocity layer not found — serving empty")
+
     zones_count = len(app.state.zones["features"])
     slides_count = len(app.state.slides_features)
     stations_count = len(app.state.stations["features"])

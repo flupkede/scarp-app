@@ -1,4 +1,4 @@
-"""Layer endpoints — /api/layers/slides, /api/layers/stations, /api/layers/influence."""
+"""Layer endpoints — slides, stations, influence, confidence, glacier_velocity."""
 
 from __future__ import annotations
 
@@ -37,5 +37,21 @@ async def get_confidence(request: Request):
         return JSONResponse(
             status_code=404,
             content={"detail": "Confidence layer not yet generated"},
+        )
+    return data
+
+
+@router.get("/glacier_velocity", response_model=None)
+async def get_glacier_velocity(request: Request):
+    """Return ITS_LIVE glacier velocity points from data/processed/glacier_velocity.geojson.
+
+    Each point carries v_mean / v_max / v_trend_m_yr_per_year for map styling.
+    """
+    data = getattr(request.app.state, "glacier_velocity", None)
+    if data is None:
+        # Graceful fallback — glacier pipeline hasn't run yet
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Glacier velocity layer not yet generated"},
         )
     return data

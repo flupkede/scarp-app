@@ -112,3 +112,5 @@ GLACIER_CATALOG_FILE = "glacier_catalog.geojson"
 VELOCITY_SUMMARY_FILE = "velocity_summary.geojson"
 ZONES_ENRICHED_FILE = "zones_glacier_enriched.geojson"
 ZONE_GLACIER_PARAMS_FILE = "zone_glacier_params.json"
+# Published to data/processed/ (the backend's data dir) as a map layer.
+GLACIER_VELOCITY_LAYER_FILE = "glacier_velocity.geojson"

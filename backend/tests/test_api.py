@@ -27,6 +27,13 @@ def client():
     app.state.stations = stations
     app.state.slides_features = slides["features"]
     app.state.influence = {"type": "FeatureCollection", "features": []}
+    app.state.confidence = None
+
+    # Glacier velocity layer (published by glacier/30_enrich_zones.py)
+    glacier_path = DATA_DIR / "glacier_velocity.geojson"
+    app.state.glacier_velocity = (
+        json.loads(glacier_path.read_text()) if glacier_path.exists() else None
+    )
 
     return TestClient(app)
 
@@ -73,10 +80,26 @@ class TestZones:
             "proximity",
             "exposure",
             "coverage",
+            "glacier",
             "coast_dist_km",
         ):
             assert key in comp, f"Missing component: {key}"
         assert feat["geometry"]["type"] == "Point"
+
+    def test_zones_carry_glacier_context(self, client):
+        """Each zone should carry a rich glacier-context block (Phase 3/4)."""
+        r = client.get("/api/zones/site-001")
+        glac = r.json()["properties"].get("glacier")
+        assert glac is not None, "zone missing glacier context block"
+        for key in (
+            "has_velocity_data",
+            "nearest_active_ice",
+            "dist_to_active_ice_km",
+            "glacier_proximity",
+            "glacier_dynamics",
+            "glacier_signal",
+        ):
+            assert key in glac, f"Missing glacier field: {key}"
 
     def test_zones_min_score_filter(self, client):
         r = client.get("/api/zones?min_score=0.9")
@@ -126,6 +149,16 @@ class TestLayers:
     def test_confidence_404(self, client):
         r = client.get("/api/layers/confidence")
         assert r.status_code == 404
+
+    def test_glacier_velocity(self, client):
+        r = client.get("/api/layers/glacier_velocity")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["type"] == "FeatureCollection"
+        assert len(data["features"]) > 0
+        props = data["features"][0]["properties"]
+        assert "v_mean" in props
+        assert "v_trend_m_yr_per_year" in props
 
 
 class TestSearch:
