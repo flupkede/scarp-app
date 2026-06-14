@@ -88,8 +88,23 @@ MIN_TREND_SPAN_YEARS = 2.0  # need a real time baseline to regress over
 SECONDS_PER_YEAR = 365.25 * 86400.0
 
 # ---------------------------------------------------------------------------
+# Zone enrichment (Phase 3) — per-Scarp-zone glacier context
+# ---------------------------------------------------------------------------
+# A summary point counts as "active ice" (a glacier-flow / terminus proxy) when
+# its mean velocity exceeds this. Below it, motion is noise or stagnant ice.
+ACTIVE_ICE_V_THRESHOLD_M_YR = 25.0
+# Distance-decay length for glacier influence on a slope (km). Risk from a
+# retreating/buttressing glacier declines with distance from the ice front.
+GLACIER_PROXIMITY_DECAY_KM = 8.0
+# Trend magnitude (|m/yr per year|) treated as full-scale glacier dynamism for
+# normalising the dynamics signal to 0..1.
+GLACIER_DYNAMICS_FULLSCALE_TREND = 5.0
+
+# ---------------------------------------------------------------------------
 # Output file names
 # ---------------------------------------------------------------------------
 VELOCITY_TIMESERIES_FILE = "velocity_timeseries.parquet"
 GLACIER_CATALOG_FILE = "glacier_catalog.geojson"
 VELOCITY_SUMMARY_FILE = "velocity_summary.geojson"
+ZONES_ENRICHED_FILE = "zones_glacier_enriched.geojson"
+ZONE_GLACIER_PARAMS_FILE = "zone_glacier_params.json"
