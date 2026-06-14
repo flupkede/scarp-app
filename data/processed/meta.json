@@ -5,12 +5,13 @@
     "cell_size": 90,
     "crs": "EPSG:3338",
     "weights": {
-      "susceptibility": 0.25,
-      "fjord_wall": 0.25,
-      "proximity": 0.2,
-      "volume_proxy": 0.1,
-      "exposure": 0.1,
-      "gap": 0.1
+      "susceptibility": 0.22,
+      "fjord_wall": 0.22,
+      "proximity": 0.16,
+      "volume_proxy": 0.09,
+      "exposure": 0.08,
+      "gap": 0.08,
+      "glacier": 0.15
     },
     "max_candidates": 120,
     "influence_radius_m": 3000
@@ -31,5 +32,10 @@
       "Haines/Skagway": 3,
       "Yakutat/Glacier Bay": 20
     }
+  },
+  "glacier_rerank": {
+    "applied_at": "2026-06-14T12:31:56.910880+00:00",
+    "pipeline": "glacier/40_rerank_zones.py",
+    "note": "Scores re-ranked with a glacier-dynamics signal (W_GLACIER=0.15); candidate set unchanged."
   }
 }

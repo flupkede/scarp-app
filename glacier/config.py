@@ -99,6 +99,10 @@ GLACIER_PROXIMITY_DECAY_KM = 8.0
 # Trend magnitude (|m/yr per year|) treated as full-scale glacier dynamism for
 # normalising the dynamics signal to 0..1.
 GLACIER_DYNAMICS_FULLSCALE_TREND = 5.0
+# glacier_signal = proximity * (BASE + (1-BASE) * dynamics). BASE is the weight
+# proximity carries on its own; dynamism modulates the remainder. Shared by the
+# per-zone enrichment and the raster scoring component so they stay consistent.
+GLACIER_SIGNAL_BASE = 0.5
 
 # ---------------------------------------------------------------------------
 # Output file names

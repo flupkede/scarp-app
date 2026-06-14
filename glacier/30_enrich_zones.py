@@ -42,6 +42,7 @@ from config import (
     GLACIER_DYNAMICS_FULLSCALE_TREND,
     GLACIER_POINTS_OF_INTEREST,
     GLACIER_PROXIMITY_DECAY_KM,
+    GLACIER_SIGNAL_BASE,
     SCARP_DATA,
     VELOCITY_SUMMARY_FILE,
     ZONE_GLACIER_PARAMS_FILE,
@@ -143,7 +144,9 @@ def enrich_zone(feature: dict, by_id: dict, named: list[dict], active: list[dict
     )
     # Combined glacier signal: proximity dominates, modulated by dynamism so a
     # nearby fast-changing glacier outscores a nearby stable one.
-    glacier_signal = glacier_proximity * (0.5 + 0.5 * glacier_dynamics)
+    glacier_signal = glacier_proximity * (
+        GLACIER_SIGNAL_BASE + (1.0 - GLACIER_SIGNAL_BASE) * glacier_dynamics
+    )
 
     return {
         "has_velocity_data": has_data,
