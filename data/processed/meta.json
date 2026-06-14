@@ -34,7 +34,7 @@
     }
   },
   "glacier_rerank": {
-    "applied_at": "2026-06-14T12:31:56.910880+00:00",
+    "applied_at": "2026-06-14T13:31:07.196535+00:00",
     "pipeline": "glacier/40_rerank_zones.py",
     "note": "Scores re-ranked with a glacier-dynamics signal (W_GLACIER=0.15); candidate set unchanged."
   }
