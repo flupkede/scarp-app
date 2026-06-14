@@ -97,8 +97,9 @@ instructions.
 `svelte-check` + `pnpm build` (frontend). Reviewer-agent review per commit.
 
 **Dependencies / open.** None blocking to start. ⛔ Glacier-thinning overlay
-deferred to Phase 2 (needs Hig's dataset). Confirm whether to add USGS **lw**
-raster alongside n10.
+deferred to Phase 2 (needs Hig's dataset). **Decided: vendor USGS `lw` raster
+alongside `n10`** (Hig uses both; his geology lead) — add to `prep/00_download.py`
++ susceptibility handling as a Stage 1.0 in this phase.
 
 ---
 

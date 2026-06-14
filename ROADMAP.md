@@ -206,6 +206,6 @@ tools to *look* at the data. Note: **ITS_LIVE = velocity, NOT ice-front/retreat.
 1. **Phase 1 kickoff** — ITS_LIVE exploration outputs + instrument shell, on a new
    branch. (Awaiting go.)
 2. Obtain the data marked "need" above from Hig as he surfaces over the summer.
-3. Confirm whether to also vendor Hig's USGS **lw** raster (he uses n10 *and* lw;
-   Scarp currently only n10).
+3. **DECIDED: vendor USGS `lw` raster alongside `n10`** (Hig uses both; his
+   geology lead). Folded into Phase 1.
 4. Korup loop-in timing: after Phase 1–2 produce something visual to show.
