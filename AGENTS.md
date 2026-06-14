@@ -9,6 +9,27 @@
 
 ---
 
+## Current Plan
+
+> Scarp is evolving from a *susceptibility heatmap* into a **calibrated
+> landslide-likelihood tool**, in collaboration with geologist Bretwood "Hig"
+> Higman. The full scientific roadmap, hypotheses, methodology, data inventory
+> and collaboration brief live in **[`ROADMAP.md`](./ROADMAP.md)** — read that
+> for the science direction; this file stays the project/engineering reference.
+
+- **North star:** produce an actual annual probability with honest uncertainty
+  (calibrated on Hig's N≈120 inventory), not a relative susceptibility score.
+- **Current ranking = uncalibrated heuristic** (weighted-additive). It is a
+  placeholder en route to Bayesian calibration; do not present it as probability.
+- **Strategy:** build the modernized base in Scarp, absorb Hig's data + viewer
+  features, implement the mail+call roadmap; converge toward landslidescience.org
+  later. Do NOT fork Hig's repo now.
+- **Next step:** Phase 1 — ITS_LIVE exploration outputs + instrument shell
+  (multi-temporal imagery basemaps, layer control), and hand-mapping ice-front
+  retreat for Tracy Arm + Barry Arm.
+
+---
+
 ## Context
 
 Independent geologist Bretwood "Hig" Higman builds $300 mason-jar sensors and installs them by hand in Alaska's fjords. Nobody is systematically deciding *where* to monitor next. Scarp ranks where a single sensor would save the most lives, using only public data.
@@ -22,7 +43,7 @@ Source: *Lessons of a landslide detective* by Christian Elliott, National Geogra
 ## Implemented Features
 
 - **Data pipeline (prep/)** — 7 scripts: download → normalize EPSG:3338 → slope from DEM → relief from DEM → exposure from OSM → monitoring mask from AEC stations → weighted-additive scoring with local-maxima detection
-- **Scoring engine** — weighted-additive (not multiplicative), 7 signals: susceptibility (USGS 90 m), fjord wall (relief × water proximity), volume proxy (height × steepness, replaces redundant slope), proximity to known slides (**Hig's curated 1,319-event inventory**), exposure (OSM buildings/roads/tourism), monitoring gap (AEC seismic stations), and **glacier dynamics** (ITS_LIVE, W_GLACIER=0.15)
+- **Scoring engine** — weighted-additive (not multiplicative), 7 signals: susceptibility (USGS 90 m), fjord wall (relief × water proximity), volume proxy (height × steepness, replaces redundant slope), proximity to known slides (**Hig's curated 1,319-event inventory**), exposure (OSM buildings/roads/tourism), monitoring gap (AEC seismic stations), and **glacier dynamics** (ITS_LIVE, W_GLACIER=0.15). **NOTE: this is an uncalibrated heuristic with hand-set weights — a placeholder en route to calibrated probability (see `ROADMAP.md`). Hand-set weights contradict the calibrate-to-events goal and will be replaced.**
 - **Glacier dynamics (ITS_LIVE)** — `glacier/` pipeline ingests NASA ITS_LIVE velocity (Zarr/S3), extracts per-point time series + robust trends, enriches each candidate zone with glacier context (proximity to active ice, ice velocity, trend), and re-ranks the proven 120-candidate set with a glacier scoring signal. Served via `/api/layers/glacier_velocity` + a per-zone glacier block on `/api/zones`; shown in the zone-detail panel and an optional map velocity layer
 - **Hig inventory (landslidescience.org)** — `prep/05_hig_inventory.py` ingests Hig's curated Alaska inventory (1,464 landslides, 1,789 footprint polygons, 525 survey circles) as static GeoJSON. `prep/55_hig_proximity.py` makes it the **proximity scoring basis** (replaces the public DGGS/USFS set) via a pointwise re-rank. Served as `/api/layers/{hig_landslides,hig_polygons,hig_survey_circles}` with optional map layers; each candidate carries `nearest_hig_slide_km`
 - **Fjord-wall signal** — local relief × water proximity, prevents Anchorage suburbs from dominating
