@@ -2,8 +2,9 @@
 	import maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { onMount } from 'svelte';
+	import { BASEMAPS, DEFAULT_BASEMAP_ID } from '$lib/basemaps';
 
-	let { sites, top10, influenceGeojson, slides, stations, confidence, glacierVelocity, higLandslides, higPolygons, higSurveyCircles, onSelectSite, layerState }: {
+	let { sites, top10, influenceGeojson, slides, stations, confidence, glacierVelocity, higLandslides, higPolygons, higSurveyCircles, onSelectSite, layerState, basemapId = DEFAULT_BASEMAP_ID }: {
 		sites: GeoJSON.FeatureCollection;
 		top10: GeoJSON.Feature[];
 		influenceGeojson: GeoJSON.FeatureCollection;
@@ -24,11 +25,15 @@
 			showGlacier: boolean;
 			showHigInventory: boolean;
 			showSurveyCircles: boolean;
+			zonesOpacity: number;
+			glacierOpacity: number;
 		};
+		basemapId?: string;
 	} = $props();
 
 	let mapContainer: HTMLDivElement;
 	let map: maplibregl.Map | null = null;
+	let mapLoaded = $state(false);
 
 	function toggleLayer(layerId: string, visible: boolean) {
 		if (!map) return;
@@ -63,6 +68,28 @@
 		toggleLayer('survey-circles-outline', layerState.showSurveyCircles);
 	});
 
+	// --- Basemap switching ---
+	$effect(() => {
+		if (!mapLoaded || !map) return;
+		const bm = BASEMAPS.find((b) => b.id === basemapId);
+		if (!bm) return;
+		(map.getSource('basemap') as any).setTiles(bm.tiles);
+	});
+
+	// --- Layer opacity ---
+	$effect(() => {
+		if (!mapLoaded || !map) return;
+		if (map.getLayer('zones-fill')) {
+			map.setPaintProperty('zones-fill', 'fill-opacity', layerState.zonesOpacity);
+		}
+	});
+	$effect(() => {
+		if (!mapLoaded || !map) return;
+		if (map.getLayer('glacier-velocity-layer')) {
+			map.setPaintProperty('glacier-velocity-layer', 'circle-opacity', layerState.glacierOpacity);
+		}
+	});
+
 	/** Generate a 32×32 diagonal-hatch ImageData for MapLibre fill-pattern. */
 	function makeDiagonalHatch(): ImageData {
 		const size = 32;
@@ -91,21 +118,18 @@
 			style: {
 				version: 8,
 				sources: {
-					'esri-topo': {
+					basemap: {
 						type: 'raster',
-						tiles: [
-							'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}'
-						],
+						tiles: (BASEMAPS.find((b) => b.id === basemapId) ?? BASEMAPS[0]).tiles,
 						tileSize: 256,
-						attribution: 'Tiles &copy; Esri'
+						attribution: (BASEMAPS.find((b) => b.id === basemapId) ?? BASEMAPS[0]).attribution
 					}
 				},
 				layers: [
 					{
-						id: 'esri-topo-layer',
+						id: 'basemap-layer',
 						type: 'raster',
-						source: 'esri-topo'
-						// NO raster-brightness-max or raster-saturation overrides — they dim tiles
+						source: 'basemap'
 					}
 				]
 			},
@@ -496,6 +520,7 @@
 				requestAnimationFrame(animatePulse);
 			}
 			animatePulse();
+			mapLoaded = true;
 		});
 
 		map = m;

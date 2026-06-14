@@ -8,6 +8,8 @@
 	import ZoneDetail from '$lib/components/ZoneDetail.svelte';
 	import LayerToggle from '$lib/components/LayerToggle.svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
+	import BasemapSwitcher from '$lib/components/BasemapSwitcher.svelte';
+	import { DEFAULT_BASEMAP_ID } from '$lib/basemaps';
 
 	const store = getZoneStore();
 
@@ -61,6 +63,9 @@
 			? import.meta.env.VITE_PUBLIC_API_URL
 			: 'http://localhost:11000';
 
+	// Active basemap identifier (shared with Map + BasemapSwitcher)
+	let basemapId = $state(DEFAULT_BASEMAP_ID);
+
 	// Layer state (reactive object shared with Map + LayerToggle)
 	let layerState = $state({
 		showSlides: false,
@@ -70,7 +75,9 @@
 		showConfidence: true,
 		showGlacier: false,
 		showHigInventory: false,
-		showSurveyCircles: false
+		showSurveyCircles: false,
+		zonesOpacity: 0.35,
+		glacierOpacity: 0.75
 	});
 
 	onMount(async () => {
@@ -317,8 +324,10 @@
 
 			<!-- Map area — full 100% -->
 			<div class="flex-1 relative">
+				<BasemapSwitcher {basemapId} onSelect={(id) => (basemapId = id)} />
 				<MapComponent
 					{layerState}
+					{basemapId}
 					sites={{ type: 'FeatureCollection', features: allSites }}
 					top10={top10Sites.map((f) => ({
 						type: 'Feature' as const,

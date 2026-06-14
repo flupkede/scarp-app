@@ -9,6 +9,8 @@
 			showGlacier: boolean;
 			showHigInventory: boolean;
 			showSurveyCircles: boolean;
+			zonesOpacity: number;
+			glacierOpacity: number;
 		} | null;
 		/** Whether confidence.geojson has been generated yet. If false, toggle is hidden. */
 		hasConfidence?: boolean;
@@ -38,6 +40,22 @@
 			<span class="inline-block w-3 h-2 rounded-sm" style="background: #ea580c"></span>
 			Risk zones
 		</label>
+		{#if layerState?.showInfluence}
+			<div class="flex items-center gap-2 ml-5">
+				<span class="text-stone-400 text-[10px] w-10 shrink-0">Opacity</span>
+				<input
+					type="range"
+					min="0"
+					max="1"
+					step="0.05"
+					value={layerState?.zonesOpacity ?? 0.35}
+					oninput={(e) => {
+						if (layerState) layerState.zonesOpacity = +(e.currentTarget as HTMLInputElement).value;
+					}}
+					class="flex-1 h-1.5 cursor-pointer accent-amber-500"
+				/>
+			</div>
+		{/if}
 		<label class="flex items-center gap-2 text-xs text-ink cursor-pointer">
 			<input
 				type="checkbox"
@@ -105,6 +123,22 @@
 				<span class="inline-block w-3 h-3 rounded-full" style="background: #0ea5e9"></span>
 				Glacier velocity
 			</label>
+			{#if layerState?.showGlacier}
+				<div class="flex items-center gap-2 ml-5">
+					<span class="text-stone-400 text-[10px] w-10 shrink-0">Opacity</span>
+					<input
+						type="range"
+						min="0"
+						max="1"
+						step="0.05"
+						value={layerState?.glacierOpacity ?? 0.75}
+						oninput={(e) => {
+							if (layerState) layerState.glacierOpacity = +(e.currentTarget as HTMLInputElement).value;
+						}}
+						class="flex-1 h-1.5 cursor-pointer accent-sky-500"
+					/>
+				</div>
+			{/if}
 		{/if}
 
 		{#if hasConfidence}
