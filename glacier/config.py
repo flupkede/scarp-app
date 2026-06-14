@@ -121,6 +121,15 @@ EXPLORE_GAP_YEARS = 3.0
 EXPLORE_RETREAT_TAIL_YEARS = 3.0
 
 # ---------------------------------------------------------------------------
+# Manual ice-front ground truth (Phase 1 Stage 1.6)
+# ---------------------------------------------------------------------------
+# Hand-digitized ice-front lines (one LineString per glacier per date) used as
+# ground truth for Phase 2 retreat automation. See handmatig_ijsfront_intekenen.md.
+ICE_FRONT_DIR = REPO_ROOT / "data" / "manual" / "ice_fronts"
+ICE_FRONT_FIELDS = ("glacier", "date", "source_imagery", "confidence")
+ICE_FRONT_PLOTS_DIR = DATA_DIR / "processed" / "plots"
+
+# ---------------------------------------------------------------------------
 # Output file names
 # ---------------------------------------------------------------------------
 VELOCITY_TIMESERIES_FILE = "velocity_timeseries.parquet"
