@@ -105,9 +105,29 @@ GLACIER_DYNAMICS_FULLSCALE_TREND = 5.0
 GLACIER_SIGNAL_BASE = 0.5
 
 # ---------------------------------------------------------------------------
+# Exploration analytics (Phase 1) — "get hooks in the ITS_LIVE data"
+# ---------------------------------------------------------------------------
+# Velocity pairs are noisy, so the time series is binned to annual medians; a
+# year needs at least this many observations to be trusted as a data point.
+EXPLORE_MIN_OBS_PER_YEAR = 2
+# Year-over-year change in annual-median velocity (m/yr) flagged as an
+# acceleration/deceleration "episode" (the sawtooth Hig described).
+EXPLORE_EPISODE_DELTA_M_YR = 50.0
+# A temporal gap (years) between consecutive observations flagged as a coverage
+# gap. A gap can encode a glacier retreating past the sample point.
+EXPLORE_GAP_YEARS = 3.0
+# If a point's coverage ENDS more than this many years before the dataset-wide
+# latest observation, flag it as a candidate retreat signal (ice left the point).
+EXPLORE_RETREAT_TAIL_YEARS = 3.0
+
+# ---------------------------------------------------------------------------
 # Output file names
 # ---------------------------------------------------------------------------
 VELOCITY_TIMESERIES_FILE = "velocity_timeseries.parquet"
+# Phase 1 exploration outputs
+GLACIER_EXPLORATION_FILE = "glacier_exploration.json"        # full per-point analytics (glacier/)
+GLACIER_TIMESERIES_LAYER_FILE = "glacier_timeseries.json"    # published to data/processed for charts
+GLACIER_EPISODES_LAYER_FILE = "glacier_episodes.geojson"     # published episode markers
 GLACIER_CATALOG_FILE = "glacier_catalog.geojson"
 VELOCITY_SUMMARY_FILE = "velocity_summary.geojson"
 ZONES_ENRICHED_FILE = "zones_glacier_enriched.geojson"
