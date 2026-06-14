@@ -20,9 +20,9 @@ from __future__ import annotations
 import json
 import sys
 
-import numpy as np
 import pandas as pd
 
+from _trend import linear_velocity_trend
 from config import (
     DATA_PROCESSED,
     EXPLORE_EPISODE_DELTA_M_YR,
@@ -33,39 +33,12 @@ from config import (
     GLACIER_EXPLORATION_FILE,
     GLACIER_POINTS_OF_INTEREST,
     GLACIER_TIMESERIES_LAYER_FILE,
-    MIN_TREND_OBSERVATIONS,
-    MIN_TREND_SPAN_YEARS,
     SCARP_DATA,
-    SECONDS_PER_YEAR,
     VELOCITY_TIMESERIES_FILE,
 )
 
 # Named glaciers of interest (point_id == label in the parquet).
 NAMED_GLACIERS = {label for _lon, _lat, label in GLACIER_POINTS_OF_INTEREST}
-
-
-def _linear_trend(dates: pd.Series, v_values: np.ndarray) -> float:
-    """Robust linear velocity trend (m/yr per year).
-
-    Mirrors `_compute_trend` in 10_extract.py (that module's leading-digit name
-    is not importable). Uses timedelta.total_seconds() for the time axis — the
-    pd.to_numeric path silently mis-scales datetime64. Returns 0.0 when there is
-    too little signal to trust a slope.
-    """
-    frame = pd.DataFrame(
-        {"date": pd.to_datetime(pd.Series(dates).values, errors="coerce"), "v": v_values}
-    ).dropna()
-    if len(frame) < MIN_TREND_OBSERVATIONS:
-        return 0.0
-    frame = frame.sort_values("date")
-    years = (frame["date"] - frame["date"].min()).dt.total_seconds() / SECONDS_PER_YEAR
-    if float(years.max()) < MIN_TREND_SPAN_YEARS:
-        return 0.0
-    try:
-        slope = np.polyfit(years.to_numpy(), frame["v"].to_numpy(), 1)[0]
-    except (np.linalg.LinAlgError, ValueError):
-        return 0.0
-    return float(slope)
 
 
 def _annual_series(group: pd.DataFrame) -> list[dict]:
@@ -150,9 +123,8 @@ def _coverage(group: pd.DataFrame, dataset_end_year: int) -> dict:
 
 def analyse(combined: pd.DataFrame) -> dict:
     """Per-point exploration analytics keyed by point_id."""
-    dataset_end_year = int(
-        pd.to_datetime(combined["mid_date"], errors="coerce").dropna().max().year
-    )
+    end_dates = pd.to_datetime(combined["mid_date"], errors="coerce").dropna()
+    dataset_end_year = int(end_dates.max().year) if not end_dates.empty else 0
     results: dict[str, dict] = {}
     for point_id, group in combined.groupby("point_id"):
         v_clean = group["v"].dropna()
@@ -167,7 +139,9 @@ def analyse(combined: pd.DataFrame) -> dict:
             "obs_count": int(len(v_clean)),
             "v_mean": round(float(v_clean.mean()), 1),
             "v_max": round(float(v_clean.max()), 1),
-            "trend_m_yr_per_year": round(_linear_trend(group["mid_date"], group["v"].to_numpy()), 3),
+            "trend_m_yr_per_year": round(
+                linear_velocity_trend(group["mid_date"], group["v"].to_numpy()), 3
+            ),
             "annual": annual,
             "seasonal": _seasonal(group),
             "episodes": _episodes(annual),

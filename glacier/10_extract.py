@@ -25,17 +25,15 @@ import pyproj
 import xarray as xr
 from shapely.geometry import Point, shape
 
+from _trend import linear_velocity_trend
 from config import (
     CUBE_EPSG,
     DATA_PROCESSED,
     DATA_RAW,
     GLACIER_POINTS_OF_INTEREST,
     ITS_LIVE_CATALOG_URL,
-    MIN_TREND_OBSERVATIONS,
-    MIN_TREND_SPAN_YEARS,
     MIN_VELOCITY_OBSERVATIONS,
     SCARP_DATA,
-    SECONDS_PER_YEAR,
     SE_ALASKA_BBOX_WGS84,
     VELOCITY_OUTLIER_THRESHOLD_M_YR,
     VELOCITY_SUMMARY_FILE,
@@ -395,30 +393,13 @@ def regenerate_summary_from_parquet() -> gpd.GeoDataFrame:
 
 
 def _compute_trend(v_values: np.ndarray, dates: pd.Series) -> float:
-    """Compute linear velocity trend (m/yr per year) via least-squares regression.
+    """Linear velocity trend (m/yr per year).
 
-    `v_values` and `dates` must be positionally aligned (same point, same order).
-    Builds a clean aligned frame, drops NaT/NaN, sorts chronologically, converts
-    the time axis to fractional years via timedelta.total_seconds() (the
-    pd.to_numeric path silently mis-scales datetime64 and collapses the x-range),
-    then regresses. Returns 0.0 when there is too little signal to trust a slope.
+    Thin wrapper preserving this module's (v_values, dates) call order; the
+    regression itself lives in the shared glacier/_trend.py so 10_extract and
+    15_explore can't drift.
     """
-    frame = pd.DataFrame(
-        {"date": pd.to_datetime(pd.Series(dates).values, errors="coerce"), "v": v_values}
-    ).dropna()
-    if len(frame) < MIN_TREND_OBSERVATIONS:
-        return 0.0
-
-    frame = frame.sort_values("date")
-    years = (frame["date"] - frame["date"].min()).dt.total_seconds() / SECONDS_PER_YEAR
-    if float(years.max()) < MIN_TREND_SPAN_YEARS:
-        return 0.0
-
-    try:
-        slope = np.polyfit(years.to_numpy(), frame["v"].to_numpy(), 1)[0]
-    except (np.linalg.LinAlgError, ValueError):
-        return 0.0
-    return float(slope)
+    return linear_velocity_trend(dates, v_values)
 
 
 if __name__ == "__main__":
