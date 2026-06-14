@@ -3,13 +3,14 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { onMount } from 'svelte';
 
-	let { sites, top10, influenceGeojson, slides, stations, confidence, onSelectSite, layerState }: {
+	let { sites, top10, influenceGeojson, slides, stations, confidence, glacierVelocity, onSelectSite, layerState }: {
 		sites: GeoJSON.FeatureCollection;
 		top10: GeoJSON.Feature[];
 		influenceGeojson: GeoJSON.FeatureCollection;
 		slides: GeoJSON.FeatureCollection;
 		stations: GeoJSON.FeatureCollection;
 		confidence: GeoJSON.FeatureCollection | null;
+		glacierVelocity: GeoJSON.FeatureCollection | null;
 		onSelectSite: (id: string) => void;
 		layerState: {
 			showSlides: boolean;
@@ -17,6 +18,7 @@
 			showInfluence: boolean;
 			showCandidates: boolean;
 			showConfidence: boolean;
+			showGlacier: boolean;
 		};
 	} = $props();
 
@@ -46,6 +48,7 @@
 		toggleLayer('confidence-low', layerState.showConfidence);
 		toggleLayer('confidence-medium', layerState.showConfidence);
 	});
+	$effect(() => { toggleLayer('glacier-velocity-layer', layerState.showGlacier); });
 
 	/** Generate a 32×32 diagonal-hatch ImageData for MapLibre fill-pattern. */
 	function makeDiagonalHatch(): ImageData {
@@ -135,6 +138,11 @@
 				m.addSource('confidence', { type: 'geojson', data: confidence });
 			}
 
+			// Glacier velocity points (optional — null if glacier pipeline hasn't run)
+			if (glacierVelocity) {
+				m.addSource('glacier-velocity', { type: 'geojson', data: glacierVelocity });
+			}
+
 			// --- Layers (bottom to top) ---
 
 			// 0. Confidence — medium band (light hatch: "data thinner here")
@@ -161,6 +169,29 @@
 					paint: {
 						'fill-pattern': 'diagonal-hatch',
 						'fill-opacity': 0.7
+					}
+				});
+			}
+
+			// 0c. Glacier velocity points (ITS_LIVE) — ice-blue, sized + shaded by speed
+			if (glacierVelocity) {
+				m.addLayer({
+					id: 'glacier-velocity-layer',
+					type: 'circle',
+					source: 'glacier-velocity',
+					layout: { visibility: layerState.showGlacier ? 'visible' : 'none' },
+					paint: {
+						'circle-radius': [
+							'interpolate', ['linear'], ['get', 'v_mean'],
+							0, 4, 50, 8, 200, 14
+						],
+						'circle-color': [
+							'interpolate', ['linear'], ['get', 'v_mean'],
+							0, '#bae6fd', 50, '#0ea5e9', 200, '#0c4a6e'
+						],
+						'circle-opacity': 0.75,
+						'circle-stroke-color': '#ffffff',
+						'circle-stroke-width': 0.5
 					}
 				});
 			}
@@ -341,6 +372,23 @@
 						.setHTML(`<strong>${props.site_name}</strong><br/>Code: ${props.station_code} (${props.network})`).addTo(m);
 				}
 			});
+
+			// Click on glacier velocity point → popup (speed + trend)
+			m.on('click', 'glacier-velocity-layer', (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
+				if (e.features && e.features.length > 0) {
+					const props = e.features[0].properties;
+					const trend = Number(props.v_trend_m_yr_per_year);
+					const dir = trend < 0 ? 'slowing' : trend > 0 ? 'accelerating' : 'steady';
+					new maplibregl.Popup({ offset: 5 }).setLngLat(e.lngLat)
+						.setHTML(
+							`<strong>${props.point_id}</strong><br/>` +
+							`Mean speed: ${Number(props.v_mean).toFixed(0)} m/yr<br/>` +
+							`Trend: ${trend > 0 ? '+' : ''}${trend.toFixed(2)} m/yr·yr (${dir})`
+						).addTo(m);
+				}
+			});
+			m.on('mouseenter', 'glacier-velocity-layer', () => { m.getCanvas().style.cursor = 'pointer'; });
+			m.on('mouseleave', 'glacier-velocity-layer', () => { m.getCanvas().style.cursor = ''; });
 
 			// Pulse animation for top 10
 			let startTime = Date.now();

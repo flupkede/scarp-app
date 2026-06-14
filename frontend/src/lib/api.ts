@@ -13,6 +13,22 @@ const API_BASE: string =
 		? import.meta.env.VITE_PUBLIC_API_URL
 		: 'http://localhost:8000';
 
+/** Per-zone glacier-dynamics context (ITS_LIVE), attached by the glacier pipeline. */
+export interface GlacierContext {
+	has_velocity_data: boolean;
+	glacier_v_mean: number | null;
+	glacier_v_max: number | null;
+	glacier_v_trend: number | null;
+	glacier_obs_count: number;
+	nearest_named_glacier: string | null;
+	dist_to_named_glacier_km: number | null;
+	nearest_active_ice: string | null;
+	dist_to_active_ice_km: number | null;
+	glacier_proximity: number;
+	glacier_dynamics: number;
+	glacier_signal: number;
+}
+
 export interface ZoneFeature {
 	type: 'Feature';
 	properties: {
@@ -27,8 +43,11 @@ export interface ZoneFeature {
 			proximity: number;
 			exposure: number;
 			coverage: number;
+			glacier: number;
 			coast_dist_km: number;
 		};
+		/** Present once the glacier pipeline has run; undefined otherwise. */
+		glacier?: GlacierContext;
 	};
 	geometry: GeoJSON.Point;
 }
@@ -115,6 +134,22 @@ export async function searchZones(query: string): Promise<SearchResponse> {
  */
 export async function fetchConfidence(): Promise<GeoJSON.FeatureCollection | null> {
 	const url = `${API_BASE}/api/layers/confidence`;
+	try {
+		const res = await fetch(url);
+		if (res.status === 404) return null;
+		if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
+		return res.json();
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Fetch the ITS_LIVE glacier velocity layer. Returns null if not generated yet
+ * (404) — the toggle is hidden in that case; no console errors.
+ */
+export async function fetchGlacierVelocity(): Promise<GeoJSON.FeatureCollection | null> {
+	const url = `${API_BASE}/api/layers/glacier_velocity`;
 	try {
 		const res = await fetch(url);
 		if (res.status === 404) return null;

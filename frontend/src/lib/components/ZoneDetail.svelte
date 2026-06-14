@@ -17,9 +17,13 @@
 		{ key: 'fjord_wall', label: 'Fjord wall', value: components.fjord_wall },
 		{ key: 'proximity', label: 'Proximity', value: components.proximity },
 		{ key: 'volume_proxy', label: 'Volume potential', value: components.volume_proxy },
+		{ key: 'glacier', label: 'Glacier dynamics', value: components.glacier ?? 0 },
 		{ key: 'exposure', label: 'Exposure', value: components.exposure },
 		{ key: 'coverage', label: 'Coverage', value: components.coverage }
 	]);
+
+	// Glacier context (ITS_LIVE) — present once the glacier pipeline has run.
+	let glacier = $derived(site.properties.glacier);
 
 	let rankColor = $derived(
 		site.properties.rank <= 10
@@ -154,6 +158,46 @@
 		<div class="mt-3 text-xs text-stone-500">
 			Coast distance: {components.coast_dist_km.toFixed(1)} km
 		</div>
+
+		<!-- Glacier context (ITS_LIVE) -->
+		{#if glacier}
+			<h4 class="font-serif font-semibold text-sm text-ink mt-5 mb-2 uppercase tracking-wide">
+				Glacier dynamics
+			</h4>
+			<div class="space-y-1.5 text-xs text-stone-600">
+				{#if glacier.nearest_active_ice}
+					<div class="flex justify-between gap-2">
+						<span>Nearest active ice</span>
+						<span class="font-mono text-ink text-right">
+							{glacier.dist_to_active_ice_km}&nbsp;km
+						</span>
+					</div>
+				{/if}
+				{#if glacier.nearest_named_glacier}
+					<div class="flex justify-between gap-2">
+						<span>Nearest named glacier</span>
+						<span class="text-ink text-right truncate">{glacier.nearest_named_glacier}</span>
+					</div>
+				{/if}
+				{#if glacier.has_velocity_data && glacier.glacier_v_mean != null}
+					<div class="flex justify-between gap-2">
+						<span>Ice velocity here</span>
+						<span class="font-mono text-ink">{glacier.glacier_v_mean.toFixed(0)} m/yr</span>
+					</div>
+					{#if glacier.glacier_v_trend != null}
+						<div class="flex justify-between gap-2">
+							<span>Velocity trend</span>
+							<span class="font-mono {glacier.glacier_v_trend < 0 ? 'text-blue-600' : 'text-red-600'}">
+								{glacier.glacier_v_trend > 0 ? '+' : ''}{glacier.glacier_v_trend.toFixed(2)} m/yr·yr
+								{glacier.glacier_v_trend < 0 ? ' (slowing)' : glacier.glacier_v_trend > 0 ? ' (accelerating)' : ''}
+							</span>
+						</div>
+					{/if}
+				{:else}
+					<div class="text-stone-400 italic">No ITS_LIVE velocity at this site — context inferred from nearby ice.</div>
+				{/if}
+			</div>
+		{/if}
 
 		<!-- Nearby slides -->
 		{#if nearbySlides.length > 0}

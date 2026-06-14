@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { getZoneStore } from '$lib/stores/zones.svelte';
-	import { fetchZones, fetchSlides, fetchStations, fetchConfidence, type ZoneFeature } from '$lib/api';
+	import { fetchZones, fetchSlides, fetchStations, fetchConfidence, fetchGlacierVelocity, type ZoneFeature } from '$lib/api';
 	import MapComponent from '$lib/components/Map.svelte';
 	import Splash from '$lib/components/Splash.svelte';
 	import PriorityList from '$lib/components/PriorityList.svelte';
@@ -18,6 +18,7 @@
 	let slidesData = $state<GeoJSON.FeatureCollection>({ type: 'FeatureCollection', features: [] });
 	let stationsData = $state<GeoJSON.FeatureCollection>({ type: 'FeatureCollection', features: [] });
 	let confidenceData = $state<GeoJSON.FeatureCollection | null>(null);
+	let glacierVelocityData = $state<GeoJSON.FeatureCollection | null>(null);
 	let dataReady = $state(false);
 	let dataError = $state<string | null>(null);
 
@@ -63,17 +64,19 @@
 		showStations: true,
 		showInfluence: true,
 		showCandidates: true,
-		showConfidence: true
+		showConfidence: true,
+		showGlacier: false
 	});
 
 	onMount(async () => {
 		try {
 			// Load data from API
-			const [zones, slides, stations, confidence] = await Promise.all([
+			const [zones, slides, stations, confidence, glacierVelocity] = await Promise.all([
 				fetchZones(120),
 				fetchSlides(),
 				fetchStations(),
-				fetchConfidence() // null if not yet generated — handled gracefully
+				fetchConfidence(), // null if not yet generated — handled gracefully
+				fetchGlacierVelocity() // null if glacier pipeline hasn't run — handled gracefully
 			]);
 
 			allSites = zones.features;
@@ -81,6 +84,7 @@
 			slidesData = slides;
 			stationsData = stations;
 			confidenceData = confidence; // null → toggle hidden in LayerToggle
+			glacierVelocityData = glacierVelocity; // null → toggle hidden in LayerToggle
 
 			// Load influence polygons from API
 			try {
@@ -297,7 +301,7 @@
 				<div class="flex-1 overflow-hidden">
 					<PriorityList sites={allSites} onSelect={handleSelectSite} />
 				</div>
-				<LayerToggle {layerState} hasConfidence={confidenceData !== null} />
+				<LayerToggle {layerState} hasConfidence={confidenceData !== null} hasGlacier={glacierVelocityData !== null} />
 			</aside>
 
 			<!-- Map area — full 100% -->
@@ -314,6 +318,7 @@
 					slides={slidesData}
 					stations={stationsData}
 					confidence={confidenceData}
+					glacierVelocity={glacierVelocityData}
 					onSelectSite={handleSelectSite}
 				/>
 
