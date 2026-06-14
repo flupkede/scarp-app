@@ -13,11 +13,24 @@
 
 ---
 
-## Phase 0 — Base + reframe ✅ (done as docs)
+## Phase 0 — Base + reframe
 
-- ROADMAP.md + AGENTS.md reframe committed.
-- Scarp = modernized base; score relabeled uncalibrated heuristic.
-- No code changes required beyond the relabel already noted in AGENTS.md.
+**Docs ✅ done.** ROADMAP.md + AGENTS.md reframe committed; Scarp confirmed as the
+modernized base (Hig inventory + survey circles already ingested).
+
+**Execution ⏳ TODO — make the reframe real in the live product** (the decision is
+in the docs, but the app still presents the score as if authoritative). Small:
+- **Frontend honesty**: in `ZoneDetail.svelte` + the score legend, label the score
+  an **"uncalibrated heuristic"** (not a probability); add a short tooltip/note.
+- **Methodology / About page**: state the probability-not-susceptibility direction
+  and that current ranks are provisional/uncalibrated.
+- **API meta**: add a `calibration: "uncalibrated_heuristic"` flag to `meta.json` /
+  the zones response so consumers can't mistake it for a probability.
+
+Validation: `svelte-check` + `pnpm build`; backend `pytest`. One stage, one commit.
+
+> Manual ice-front mapping (Phase 1 Stage 1.6) is documented for Filip in
+> [`handmatig_ijsfront_intekenen.md`](./handmatig_ijsfront_intekenen.md).
 
 ---
 
