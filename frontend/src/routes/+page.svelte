@@ -69,6 +69,10 @@
 	// Active basemap identifier (shared with Map + BasemapSwitcher)
 	let basemapId = $state(DEFAULT_BASEMAP_ID);
 
+	// Current map camera — updated via onCameraChange; passed to BeforeAfterSwipe so it opens at the right viewport
+	let mapCenter = $state<[number, number]>([-135, 57]);
+	let mapZoom = $state(5);
+
 	// Layer state (reactive object shared with Map + LayerToggle)
 	let layerState = $state({
 		showSlides: false,
@@ -363,6 +367,7 @@
 					higPolygons={higPolygonsData}
 					higSurveyCircles={higSurveyCirclesData}
 					onSelectSite={handleSelectSite}
+					onCameraChange={(c, z) => { mapCenter = c; mapZoom = z; }}
 				/>
 
 				{#if selectedSite}
@@ -384,6 +389,8 @@
 					<BeforeAfterSwipe
 						leftId={basemapId}
 						rightId="usgs-historical-topo"
+						center={mapCenter}
+						zoom={mapZoom}
 						onClose={() => (showCompare = false)}
 					/>
 				{/if}

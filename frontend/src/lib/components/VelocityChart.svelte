@@ -44,7 +44,7 @@
 	let trendY2 = $derived(sy(data.v_mean + data.trend_m_yr_per_year * (xMax - midYear)));
 
 	// Y-axis ticks (2–3 round values)
-	let yTicks = $derived((): number[] => {
+	let yTicks = $derived.by((): number[] => {
 		if (!annual.length) return [];
 		const lo = Math.floor(yMin / 100) * 100;
 		const hi = Math.ceil(yMax / 100) * 100;
@@ -55,7 +55,7 @@
 	});
 
 	// X-axis ticks (every 2–3 years)
-	let xTicks = $derived((): number[] => {
+	let xTicks = $derived.by((): number[] => {
 		if (!annual.length) return [];
 		const span = xMax - xMin;
 		const step = span <= 6 ? 1 : span <= 12 ? 2 : 3;
@@ -79,7 +79,7 @@
 
 	<svg viewBox="0 0 {W} {H}" class="w-full" style="height:100px" aria-label="Glacier velocity chart">
 		<!-- Gridlines + Y ticks -->
-		{#each yTicks() as tick}
+		{#each yTicks as tick}
 			<line
 				x1={PAD.left}
 				y1={sy(tick)}
@@ -137,7 +137,7 @@
 		{/each}
 
 		<!-- X-axis ticks -->
-		{#each xTicks() as year}
+		{#each xTicks as year}
 			<text
 				x={sx(year)}
 				y={H - PAD.bottom + 7}

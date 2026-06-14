@@ -93,6 +93,7 @@
 		}
 		function onTouchMove(e: TouchEvent) {
 			if (!dragging || !containerEl) return;
+			e.preventDefault(); // suppress scroll during handle drag
 			const rect = containerEl.getBoundingClientRect();
 			sliderPct = Math.max(
 				5,
@@ -105,13 +106,13 @@
 
 		window.addEventListener('mousemove', onMouseMove);
 		window.addEventListener('mouseup', stopDrag);
-		window.addEventListener('touchmove', onTouchMove, { passive: true });
+		window.addEventListener('touchmove', onTouchMove, { passive: false });
 		window.addEventListener('touchend', stopDrag);
 
 		return () => {
 			window.removeEventListener('mousemove', onMouseMove);
 			window.removeEventListener('mouseup', stopDrag);
-			window.removeEventListener('touchmove', onTouchMove);
+			window.removeEventListener('touchmove', onTouchMove, { passive: false } as EventListenerOptions);
 			window.removeEventListener('touchend', stopDrag);
 			leftMap?.remove();
 			rightMap?.remove();
@@ -160,10 +161,10 @@
 		{leftLabel}
 	</div>
 
-	<!-- Right label (tracks the handle) -->
+	<!-- Right label (tracks the handle, clamped so it doesn't overlap the close button) -->
 	<div
 		class="absolute top-3 bg-black/60 text-white text-xs px-2 py-1 rounded-md backdrop-blur-sm pointer-events-none select-none"
-		style="left: calc({sliderPct}% + 10px)"
+		style="left: calc({sliderPct}% + 10px); max-width: calc({100 - sliderPct}% - 90px); overflow: hidden; white-space: nowrap; text-overflow: ellipsis"
 	>
 		{rightLabel}
 	</div>

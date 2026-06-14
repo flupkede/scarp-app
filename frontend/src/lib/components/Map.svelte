@@ -4,7 +4,7 @@
 	import { onMount } from 'svelte';
 	import { BASEMAPS, DEFAULT_BASEMAP_ID } from '$lib/basemaps';
 
-	let { sites, top10, influenceGeojson, slides, stations, confidence, glacierVelocity, higLandslides, higPolygons, higSurveyCircles, onSelectSite, layerState, basemapId = DEFAULT_BASEMAP_ID }: {
+	let { sites, top10, influenceGeojson, slides, stations, confidence, glacierVelocity, higLandslides, higPolygons, higSurveyCircles, onSelectSite, onCameraChange, layerState, basemapId = DEFAULT_BASEMAP_ID }: {
 		sites: GeoJSON.FeatureCollection;
 		top10: GeoJSON.Feature[];
 		influenceGeojson: GeoJSON.FeatureCollection;
@@ -16,6 +16,8 @@
 		higPolygons: GeoJSON.FeatureCollection | null;
 		higSurveyCircles: GeoJSON.FeatureCollection | null;
 		onSelectSite: (id: string) => void;
+		/** Optional: fires after each camera move with current center/zoom. */
+		onCameraChange?: (center: [number, number], zoom: number) => void;
 		layerState: {
 			showSlides: boolean;
 			showStations: boolean;
@@ -141,6 +143,14 @@
 		});
 
 		m.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+		// Notify parent of camera position after each pan/zoom (for Compare overlay)
+		m.on('moveend', () => {
+			if (onCameraChange) {
+				const c = m.getCenter();
+				onCameraChange([c.lng, c.lat], m.getZoom());
+			}
+		});
 
 		// Surface any MapLibre error to the console (blank-map diagnostics)
 		m.on('error', (e: { error?: Error }) => {
