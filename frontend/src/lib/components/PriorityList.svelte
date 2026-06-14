@@ -60,7 +60,7 @@
 					</span>
 					<span
 						class="text-sm font-semibold text-ink cursor-help"
-						title="Uncalibrated weighted-additive heuristic (0–1), not a probability. See About → methodology."
+						title="Uncalibrated weighted-additive heuristic (0–1), not a probability. See About → calibration status."
 					>
 						Score {site.properties.score.toFixed(3)}
 					</span>

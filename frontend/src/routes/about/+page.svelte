@@ -39,7 +39,7 @@
 				<h2 class="text-base font-semibold text-amber-300 mb-1">Calibration status — read this first</h2>
 				<p class="text-sm text-stone-300 leading-relaxed">
 					The score and rank below are an <strong class="text-white">uncalibrated weighted-additive
-					heuristic</strong> (0&ndash;1), <strong class="text-white">not a probability</strong>. They
+					heuristic</strong> (0–1), <strong class="text-white">not a probability</strong>. They
 					indicate <em>relative</em> screening priority, not a calibrated chance of failure. The roadmap
 					target is a <strong class="text-white">calibrated annual probability with honest uncertainty</strong>,
 					fitted to a real landslide inventory &mdash; following geologist Bretwood &ldquo;Hig&rdquo;
