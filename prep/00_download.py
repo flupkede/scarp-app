@@ -46,7 +46,7 @@ DATASETS: list[dict] = [
         "output": "dggs/inventory.geojson",
         "transform": "dggs_inventory",
     },
-    # 2.2 USGS n10 Susceptibility Raster (PRIMARY)
+    # 2.2 USGS n10 Susceptibility Raster (PRIMARY; quantile-nonlinear)
     {
         "name": "usgs_n10",
         "url": (
@@ -54,6 +54,22 @@ DATASETS: list[dict] = [
             "65ccea5bd34ef4b119cb3bac/n10_ak.tif"
         ),
         "output": "usgs_susc/n10_ak.tif",
+    },
+    # 2.3 USGS lw Susceptibility Raster (weighted-linear). Hig uses BOTH n10 and
+    # lw; vendored for the N10/LW scatter (Phase 3) and calibration (Phase 4).
+    # Mirrors the n10 direct-tif path on the same ScienceBase item (65ccea5b...).
+    # Fallback if the flat tif 404s: the official archive is lw_susc.zip
+    # (https://sciencebase.usgs.gov/manager/download/clxang0kd000y14pg6q9cf1w8),
+    # which extracts to lw_susc/lw_ak.tif. Marked optional so an unavailable
+    # source does not abort the whole download run.
+    {
+        "name": "usgs_lw",
+        "url": (
+            "https://prod-is-usgs-sb-prod-publish.s3.amazonaws.com/"
+            "65ccea5bd34ef4b119cb3bac/lw_ak.tif"
+        ),
+        "output": "usgs_susc/lw_ak.tif",
+        "optional": True,
     },
     # 2.4 OSM Alaska extract
     {
@@ -470,7 +486,13 @@ def main() -> None:
         # Simple download
         if is_cached(manifest, ds["name"], dest):
             continue
-        download_file(ds["url"], dest, client)
+        try:
+            download_file(ds["url"], dest, client)
+        except (httpx.HTTPError, OSError) as exc:
+            if ds.get("optional"):
+                print(f"  ! {ds['name']} unavailable ({exc}); skipping (optional)")
+                continue
+            raise
         record(manifest, ds["name"], ds["url"], dest)
         print(f"  ✓ {dest.name} ({dest.stat().st_size / 1e6:.1f} MB)")
 
