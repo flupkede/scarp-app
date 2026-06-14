@@ -56,8 +56,10 @@ data does not exist; we begin creating it by hand here (ground truth only).
   time-series + sawtooth figures; the new `glacier_exploration.json` + episode
   markers are the substantive outputs. Revisit only if Hig wants exploration-driven figures.
 - ✅ Stage 1.3 — API endpoints (`/api/layers/glacier_episodes`, `/glacier_timeseries`)
-- ⬜ Stage 1.4 — instrument shell: basemap switcher + opacity (frontend) — NEXT
-- ⬜ Stage 1.5 — before/after swipe + velocity chart (frontend)
+- ✅ Stage 1.4 — instrument shell: basemap switcher + opacity (frontend)
+  (`BasemapSwitcher.svelte`, `basemaps.ts`, opacity sliders in `LayerToggle.svelte`)
+- ✅ Stage 1.5 — before/after swipe + velocity chart (frontend)
+  (`BeforeAfterSwipe.svelte`, `VelocityChart.svelte`, `fetchGlacierTimeseries`)
 - ✅ Stage 1.6 — ice-front ground-truth scaffolding + validator (`glacier/17_icefront_check.py`)
 
 ### Stage 1.1 — ITS_LIVE exploration analytics (Python)
