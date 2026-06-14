@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
 """Scarp — Compute data-confidence layer on the COARSE 500m grid.
 
-For each 500m cell, counts how many of 5 input layers have valid data,
-normalises to 0.0–1.0, bands into low / medium / high, polygonises,
-dissolves into a few big polygons, and reprojects to EPSG:4326.
+For each 500m cell, counts how many input layers have valid data (5 public-data
+proxies + Hig's survey circles when present), normalises to 0.0–1.0, bands into
+low / medium / high, polygonises, dissolves into a few big polygons, and
+reprojects to EPSG:4326.
+
+Hig's survey circles (data/processed/hig_survey_circles.geojson) are the
+strongest confidence signal — where Hig has actually ground-truthed, we know the
+slope situation regardless of the public-data proxies. They are added as an extra
+signal and the denominator grows to match, so surveyed fjords read as
+higher-confidence and unsurveyed ones honestly read as data-limited.
 
 Usage:
     cd C:/WorkArea/AI/scarp
@@ -226,9 +233,39 @@ def main() -> None:
             print("    No coastline data available")
 
     # ------------------------------------------------------------------
-    # Confidence = count / 5.0
+    # 6. surveyed: inside one of Hig's survey circles. This is a BOOST-only
+    #    signal — where Hig has ground-truthed, we know the slope situation,
+    #    so surveyed cells gain confidence. It must not deflate unsurveyed
+    #    cells, so the denominator stays 5 and confidence is clipped to 1.0
+    #    (a surveyed cell with all 5 public signals simply saturates at 1.0).
     # ------------------------------------------------------------------
-    confidence = valid_count.astype(np.float32) / 5.0
+    print("  [6] Hig survey-circle coverage (boost) ...")
+    circles_path = DATA_PROC / "hig_survey_circles.geojson"
+    if circles_path.exists():
+        circles = gpd.read_file(circles_path).to_crs(TARGET_CRS)
+        circle_shapes = [
+            (geom, 1) for geom in circles.geometry if geom is not None and not geom.is_empty
+        ]
+        if circle_shapes:
+            surveyed = rasterize(
+                circle_shapes,
+                out_shape=(rows, cols),
+                transform=transform,
+                fill=0,
+                dtype="uint8",
+            ).astype(bool)
+            valid_count += surveyed.astype(np.uint8)
+            print(f"    {surveyed.sum():,} cells inside a survey circle "
+                  f"({surveyed.mean() * 100:.1f}%) — confidence boosted there")
+        else:
+            print("    no survey-circle geometries — no boost applied")
+    else:
+        print("    hig_survey_circles.geojson not found — no boost applied")
+
+    # ------------------------------------------------------------------
+    # Confidence = count / 5.0, clipped to 1.0 (survey boost can push to 6/5)
+    # ------------------------------------------------------------------
+    confidence = np.clip(valid_count.astype(np.float32) / 5.0, 0.0, 1.0)
 
     # ------------------------------------------------------------------
     # LAND MASK — we only search for landslides on land / fjord walls,
@@ -264,7 +301,7 @@ def main() -> None:
         (confidence >= LOW_MAX) & (confidence <= HIGH_MIN) & land_mask
     ).sum() / land_cells * 100
     low_pct = ((confidence >= 0) & (confidence < LOW_MAX) & land_mask).sum() / land_cells * 100
-    print(f"\n  Confidence bands (over land only):")
+    print("\n  Confidence bands (over land only):")
     print(f"    High   (> {HIGH_MIN}): {high_pct:.1f}%")
     print(f"    Medium ({LOW_MAX}–{HIGH_MIN}): {med_pct:.1f}%")
     print(f"    Low    (< {LOW_MAX}):  {low_pct:.1f}%")
