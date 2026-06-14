@@ -159,6 +159,15 @@
 			Coast distance: {components.coast_dist_km.toFixed(1)} km
 		</div>
 
+		{#if site.properties.nearest_hig_slide_km != null}
+			<div class="mt-1 text-xs text-stone-500">
+				Nearest mapped slide: {site.properties.nearest_hig_slide_km.toFixed(1)} km
+				{#if site.properties.nearest_hig_slide}
+					<span class="text-stone-400">({site.properties.nearest_hig_slide})</span>
+				{/if}
+			</div>
+		{/if}
+
 		<!-- Glacier context (ITS_LIVE) -->
 		{#if glacier}
 			<h4 class="font-serif font-semibold text-sm text-ink mt-5 mb-2 uppercase tracking-wide">

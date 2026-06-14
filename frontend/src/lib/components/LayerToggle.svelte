@@ -1,5 +1,5 @@
 <script lang="ts">
-	let { layerState, hasConfidence = false, hasGlacier = false }: {
+	let { layerState, hasConfidence = false, hasGlacier = false, hasHig = false }: {
 		layerState: {
 			showSlides: boolean;
 			showStations: boolean;
@@ -7,11 +7,15 @@
 			showCandidates: boolean;
 			showConfidence: boolean;
 			showGlacier: boolean;
+			showHigInventory: boolean;
+			showSurveyCircles: boolean;
 		} | null;
 		/** Whether confidence.geojson has been generated yet. If false, toggle is hidden. */
 		hasConfidence?: boolean;
 		/** Whether glacier_velocity.geojson has been generated yet. If false, toggle is hidden. */
 		hasGlacier?: boolean;
+		/** Whether the Hig inventory layers have been generated yet. If false, toggles hidden. */
+		hasHig?: boolean;
 	} = $props();
 
 	function toggle(key: string) {
@@ -64,8 +68,31 @@
 				class="rounded border-stone-300 text-amber-500 focus:ring-amber-400"
 			/>
 			<span class="inline-block w-3 h-3 rounded-full bg-amber-700 opacity-50"></span>
-			Known slides (39k)
+			Known slides (public, 39k)
 		</label>
+
+		{#if hasHig}
+			<label class="flex items-center gap-2 text-xs text-ink cursor-pointer">
+				<input
+					type="checkbox"
+					checked={layerState?.showHigInventory ?? false}
+					onchange={() => toggle('showHigInventory')}
+					class="rounded border-stone-300 text-amber-500 focus:ring-amber-400"
+				/>
+				<span class="inline-block w-3 h-3 rounded-full" style="background: #7f1d1d"></span>
+				Hig inventory (1.5k)
+			</label>
+			<label class="flex items-center gap-2 text-xs text-ink cursor-pointer">
+				<input
+					type="checkbox"
+					checked={layerState?.showSurveyCircles ?? false}
+					onchange={() => toggle('showSurveyCircles')}
+					class="rounded border-stone-300 text-amber-500 focus:ring-amber-400"
+				/>
+				<span class="inline-block w-3 h-3 rounded-full border-2 bg-transparent" style="border-color: #475569"></span>
+				Survey circles
+			</label>
+		{/if}
 
 		{#if hasGlacier}
 			<label class="flex items-center gap-2 text-xs text-ink cursor-pointer">

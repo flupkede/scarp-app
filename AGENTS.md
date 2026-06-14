@@ -22,10 +22,11 @@ Source: *Lessons of a landslide detective* by Christian Elliott, National Geogra
 ## Implemented Features
 
 - **Data pipeline (prep/)** — 7 scripts: download → normalize EPSG:3338 → slope from DEM → relief from DEM → exposure from OSM → monitoring mask from AEC stations → weighted-additive scoring with local-maxima detection
-- **Scoring engine** — weighted-additive (not multiplicative), 7 signals: susceptibility (USGS 90 m), fjord wall (relief × water proximity), volume proxy (height × steepness, replaces redundant slope), proximity to known slides (DGGS ~40k inventory), exposure (OSM buildings/roads/tourism), monitoring gap (AEC seismic stations), and **glacier dynamics** (ITS_LIVE, W_GLACIER=0.15)
+- **Scoring engine** — weighted-additive (not multiplicative), 7 signals: susceptibility (USGS 90 m), fjord wall (relief × water proximity), volume proxy (height × steepness, replaces redundant slope), proximity to known slides (**Hig's curated 1,319-event inventory**), exposure (OSM buildings/roads/tourism), monitoring gap (AEC seismic stations), and **glacier dynamics** (ITS_LIVE, W_GLACIER=0.15)
 - **Glacier dynamics (ITS_LIVE)** — `glacier/` pipeline ingests NASA ITS_LIVE velocity (Zarr/S3), extracts per-point time series + robust trends, enriches each candidate zone with glacier context (proximity to active ice, ice velocity, trend), and re-ranks the proven 120-candidate set with a glacier scoring signal. Served via `/api/layers/glacier_velocity` + a per-zone glacier block on `/api/zones`; shown in the zone-detail panel and an optional map velocity layer
+- **Hig inventory (landslidescience.org)** — `prep/05_hig_inventory.py` ingests Hig's curated Alaska inventory (1,464 landslides, 1,789 footprint polygons, 525 survey circles) as static GeoJSON. `prep/55_hig_proximity.py` makes it the **proximity scoring basis** (replaces the public DGGS/USFS set) via a pointwise re-rank. Served as `/api/layers/{hig_landslides,hig_polygons,hig_survey_circles}` with optional map layers; each candidate carries `nearest_hig_slide_km`
 - **Fjord-wall signal** — local relief × water proximity, prevents Anchorage suburbs from dominating
-- **Data-confidence layer** — shows where public inputs are thin; grey overlay + source badges in detail panel
+- **Data-confidence layer** — shows where public inputs are thin; grey overlay + source badges in detail panel. Hig's **survey circles** boost confidence where he has ground-truthed (boost-only: surveyed fjords read high, unsurveyed honestly stay data-limited)
 - **Backend API** — FastAPI: `GET /health`, `/api/zones`, `/api/zones/{id}`, `/api/layers/{slides|stations}`, `POST /api/search`
 - **NL search** — LLM translates free text to filter params; deterministic Python does actual filtering. Provider-agnostic (DeepInfra/GLM default, Anthropic fallback). Graceful fallback if no API key.
 - **Frontend** — SvelteKit 5 + MapLibre GL JS + Skeleton v4 + Tailwind. Candidate points, heatmap, priority list, zone detail panel, layer toggles, search bar
@@ -65,20 +66,29 @@ Source: *Lessons of a landslide detective* by Christian Elliott, National Geogra
 ```
 backend/          # FastAPI app (src/scarp/api/)
 frontend/         # SvelteKit 5 app
-prep/             # one-shot data pipeline scripts (scoring + candidate selection)
+prep/             # data pipeline: 05_hig_inventory, 50_score_zones (selection),
+                  #   55_hig_proximity (Hig proximity basis), 45_confidence
 glacier/          # ITS_LIVE glacier pipeline: 00_explore → 10_extract → 20_visualize
                   #   → 30_enrich_zones → 40_rerank_zones
-data/processed/   # committed GeoJSON outputs (zones, slides, stations, glacier_velocity)
+data/processed/   # committed GeoJSON (zones, slides, stations, glacier_velocity,
+                  #   hig_landslides, hig_polygons, hig_survey_circles, confidence)
 docs/             # pitch, video plan, rationale
 ```
 
-### Glacier pipeline order
+### Pipeline order
 
-`prep/50_score_zones.py` (selection) → `glacier/10_extract.py` (velocity at zones,
-network/S3) → `glacier/30_enrich_zones.py` (per-zone glacier params + publish
-velocity layer) → `glacier/40_rerank_zones.py` (glacier-aware score + rank).
-`10_extract.py --from-parquet` regenerates the summary from the cached time
-series without re-hitting the network.
+Scoring + glacier + inventory compose as a deterministic re-rank chain (the full
+90 m raster rebuild in `50_score_zones.py` is memory-bound, so glacier/inventory
+integrate by re-ranking the proven 120-candidate set rather than rebuilding it):
+
+`prep/50_score_zones.py` (candidate selection) → `prep/05_hig_inventory.py`
+(ingest Hig export) → `prep/55_hig_proximity.py` (replace proximity basis with
+Hig's curated slides) → `glacier/10_extract.py` (ITS_LIVE velocity at zones, S3) →
+`glacier/30_enrich_zones.py` (per-zone glacier params + publish velocity layer) →
+`glacier/40_rerank_zones.py` (final glacier-aware score + rank).
+`prep/45_confidence.py --force` regenerates the confidence overlay (incl. survey
+circles). `glacier/10_extract.py --from-parquet` regenerates the velocity summary
+from the cached time series without re-hitting the network.
 
 ---
 

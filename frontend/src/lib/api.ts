@@ -48,6 +48,10 @@ export interface ZoneFeature {
 		};
 		/** Present once the glacier pipeline has run; undefined otherwise. */
 		glacier?: GlacierContext;
+		/** Distance (km) to the nearest curated Hig inventory slide; set by 55_hig_proximity. */
+		nearest_hig_slide_km?: number;
+		/** Name of that nearest Hig slide. */
+		nearest_hig_slide?: string;
 	};
 	geometry: GeoJSON.Point;
 }
@@ -158,4 +162,31 @@ export async function fetchGlacierVelocity(): Promise<GeoJSON.FeatureCollection 
 	} catch {
 		return null;
 	}
+}
+
+/** Fetch an optional layer that 404s until its pipeline has run; null on 404/error. */
+async function fetchOptionalLayer(path: string): Promise<GeoJSON.FeatureCollection | null> {
+	try {
+		const res = await fetch(`${API_BASE}${path}`);
+		if (res.status === 404) return null;
+		if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
+		return res.json();
+	} catch {
+		return null;
+	}
+}
+
+/** Hig's curated landslide inventory (centroids). */
+export async function fetchHigLandslides(): Promise<GeoJSON.FeatureCollection | null> {
+	return fetchOptionalLayer('/api/layers/hig_landslides');
+}
+
+/** Hig's mapped slide footprints (body/source/deposit polygons). */
+export async function fetchHigPolygons(): Promise<GeoJSON.FeatureCollection | null> {
+	return fetchOptionalLayer('/api/layers/hig_polygons');
+}
+
+/** Hig's survey circles (where he ground-truthed). */
+export async function fetchHigSurveyCircles(): Promise<GeoJSON.FeatureCollection | null> {
+	return fetchOptionalLayer('/api/layers/hig_survey_circles');
 }

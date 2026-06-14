@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { getZoneStore } from '$lib/stores/zones.svelte';
-	import { fetchZones, fetchSlides, fetchStations, fetchConfidence, fetchGlacierVelocity, type ZoneFeature } from '$lib/api';
+	import { fetchZones, fetchSlides, fetchStations, fetchConfidence, fetchGlacierVelocity, fetchHigLandslides, fetchHigPolygons, fetchHigSurveyCircles, type ZoneFeature } from '$lib/api';
 	import MapComponent from '$lib/components/Map.svelte';
 	import Splash from '$lib/components/Splash.svelte';
 	import PriorityList from '$lib/components/PriorityList.svelte';
@@ -19,6 +19,9 @@
 	let stationsData = $state<GeoJSON.FeatureCollection>({ type: 'FeatureCollection', features: [] });
 	let confidenceData = $state<GeoJSON.FeatureCollection | null>(null);
 	let glacierVelocityData = $state<GeoJSON.FeatureCollection | null>(null);
+	let higLandslidesData = $state<GeoJSON.FeatureCollection | null>(null);
+	let higPolygonsData = $state<GeoJSON.FeatureCollection | null>(null);
+	let higSurveyCirclesData = $state<GeoJSON.FeatureCollection | null>(null);
 	let dataReady = $state(false);
 	let dataError = $state<string | null>(null);
 
@@ -65,18 +68,23 @@
 		showInfluence: true,
 		showCandidates: true,
 		showConfidence: true,
-		showGlacier: false
+		showGlacier: false,
+		showHigInventory: false,
+		showSurveyCircles: false
 	});
 
 	onMount(async () => {
 		try {
 			// Load data from API
-			const [zones, slides, stations, confidence, glacierVelocity] = await Promise.all([
+			const [zones, slides, stations, confidence, glacierVelocity, higLandslides, higPolygons, higSurveyCircles] = await Promise.all([
 				fetchZones(120),
 				fetchSlides(),
 				fetchStations(),
 				fetchConfidence(), // null if not yet generated — handled gracefully
-				fetchGlacierVelocity() // null if glacier pipeline hasn't run — handled gracefully
+				fetchGlacierVelocity(), // null if glacier pipeline hasn't run — handled gracefully
+				fetchHigLandslides(), // null if inventory pipeline hasn't run — handled gracefully
+				fetchHigPolygons(),
+				fetchHigSurveyCircles()
 			]);
 
 			allSites = zones.features;
@@ -85,6 +93,9 @@
 			stationsData = stations;
 			confidenceData = confidence; // null → toggle hidden in LayerToggle
 			glacierVelocityData = glacierVelocity; // null → toggle hidden in LayerToggle
+			higLandslidesData = higLandslides; // null → toggles hidden in LayerToggle
+			higPolygonsData = higPolygons;
+			higSurveyCirclesData = higSurveyCircles;
 
 			// Load influence polygons from API
 			try {
@@ -301,7 +312,7 @@
 				<div class="flex-1 overflow-hidden">
 					<PriorityList sites={allSites} onSelect={handleSelectSite} />
 				</div>
-				<LayerToggle {layerState} hasConfidence={confidenceData !== null} hasGlacier={glacierVelocityData !== null} />
+				<LayerToggle {layerState} hasConfidence={confidenceData !== null} hasGlacier={glacierVelocityData !== null} hasHig={higLandslidesData !== null} />
 			</aside>
 
 			<!-- Map area — full 100% -->
@@ -319,6 +330,9 @@
 					stations={stationsData}
 					confidence={confidenceData}
 					glacierVelocity={glacierVelocityData}
+					higLandslides={higLandslidesData}
+					higPolygons={higPolygonsData}
+					higSurveyCircles={higSurveyCirclesData}
 					onSelectSite={handleSelectSite}
 				/>
 

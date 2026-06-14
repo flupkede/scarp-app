@@ -3,7 +3,7 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { onMount } from 'svelte';
 
-	let { sites, top10, influenceGeojson, slides, stations, confidence, glacierVelocity, onSelectSite, layerState }: {
+	let { sites, top10, influenceGeojson, slides, stations, confidence, glacierVelocity, higLandslides, higPolygons, higSurveyCircles, onSelectSite, layerState }: {
 		sites: GeoJSON.FeatureCollection;
 		top10: GeoJSON.Feature[];
 		influenceGeojson: GeoJSON.FeatureCollection;
@@ -11,6 +11,9 @@
 		stations: GeoJSON.FeatureCollection;
 		confidence: GeoJSON.FeatureCollection | null;
 		glacierVelocity: GeoJSON.FeatureCollection | null;
+		higLandslides: GeoJSON.FeatureCollection | null;
+		higPolygons: GeoJSON.FeatureCollection | null;
+		higSurveyCircles: GeoJSON.FeatureCollection | null;
 		onSelectSite: (id: string) => void;
 		layerState: {
 			showSlides: boolean;
@@ -19,6 +22,8 @@
 			showCandidates: boolean;
 			showConfidence: boolean;
 			showGlacier: boolean;
+			showHigInventory: boolean;
+			showSurveyCircles: boolean;
 		};
 	} = $props();
 
@@ -49,6 +54,14 @@
 		toggleLayer('confidence-medium', layerState.showConfidence);
 	});
 	$effect(() => { toggleLayer('glacier-velocity-layer', layerState.showGlacier); });
+	$effect(() => {
+		toggleLayer('hig-polygons-fill', layerState.showHigInventory);
+		toggleLayer('hig-landslides-layer', layerState.showHigInventory);
+	});
+	$effect(() => {
+		toggleLayer('survey-circles-fill', layerState.showSurveyCircles);
+		toggleLayer('survey-circles-outline', layerState.showSurveyCircles);
+	});
 
 	/** Generate a 32×32 diagonal-hatch ImageData for MapLibre fill-pattern. */
 	function makeDiagonalHatch(): ImageData {
@@ -143,6 +156,17 @@
 				m.addSource('glacier-velocity', { type: 'geojson', data: glacierVelocity });
 			}
 
+			// Hig inventory layers (optional — null if inventory pipeline hasn't run)
+			if (higPolygons) {
+				m.addSource('hig-polygons', { type: 'geojson', data: higPolygons });
+			}
+			if (higLandslides) {
+				m.addSource('hig-landslides', { type: 'geojson', data: higLandslides });
+			}
+			if (higSurveyCircles) {
+				m.addSource('survey-circles', { type: 'geojson', data: higSurveyCircles });
+			}
+
 			// --- Layers (bottom to top) ---
 
 			// 0. Confidence — medium band (light hatch: "data thinner here")
@@ -190,6 +214,52 @@
 							0, '#bae6fd', 50, '#0ea5e9', 200, '#0c4a6e'
 						],
 						'circle-opacity': 0.75,
+						'circle-stroke-color': '#ffffff',
+						'circle-stroke-width': 0.5
+					}
+				});
+			}
+
+			// 0d. Survey circles (where Hig ground-truthed) — slate outline, faint fill
+			if (higSurveyCircles) {
+				m.addLayer({
+					id: 'survey-circles-fill',
+					type: 'fill',
+					source: 'survey-circles',
+					layout: { visibility: layerState.showSurveyCircles ? 'visible' : 'none' },
+					paint: { 'fill-color': '#475569', 'fill-opacity': 0.06 }
+				});
+				m.addLayer({
+					id: 'survey-circles-outline',
+					type: 'line',
+					source: 'survey-circles',
+					layout: { visibility: layerState.showSurveyCircles ? 'visible' : 'none' },
+					paint: { 'line-color': '#475569', 'line-width': 1, 'line-opacity': 0.5 }
+				});
+			}
+
+			// 0e. Hig inventory — mapped slide footprints (faint maroon fill)
+			if (higPolygons) {
+				m.addLayer({
+					id: 'hig-polygons-fill',
+					type: 'fill',
+					source: 'hig-polygons',
+					layout: { visibility: layerState.showHigInventory ? 'visible' : 'none' },
+					paint: { 'fill-color': '#7f1d1d', 'fill-opacity': 0.25 }
+				});
+			}
+
+			// 0f. Hig inventory — curated landslide centroids (maroon dots)
+			if (higLandslides) {
+				m.addLayer({
+					id: 'hig-landslides-layer',
+					type: 'circle',
+					source: 'hig-landslides',
+					layout: { visibility: layerState.showHigInventory ? 'visible' : 'none' },
+					paint: {
+						'circle-radius': 3,
+						'circle-color': '#7f1d1d',
+						'circle-opacity': 0.7,
 						'circle-stroke-color': '#ffffff',
 						'circle-stroke-width': 0.5
 					}
@@ -394,6 +464,25 @@
 			});
 			m.on('mouseenter', 'glacier-velocity-layer', () => { m.getCanvas().style.cursor = 'pointer'; });
 			m.on('mouseleave', 'glacier-velocity-layer', () => { m.getCanvas().style.cursor = ''; });
+
+			// Click on a Hig inventory landslide → popup (type, class, volume, year)
+			m.on('click', 'hig-landslides-layer', (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
+				if (e.features && e.features.length > 0) {
+					const p = e.features[0].properties;
+					const vol = Number(p.volume_preferred);
+					const volStr = Number.isFinite(vol) && vol > 0
+						? `${(vol / 1e6).toFixed(1)} M m³`
+						: 'n/a';
+					new maplibregl.Popup({ offset: 5 }).setLngLat(e.lngLat)
+						.setHTML(
+							`<strong>${p.unique_name ?? 'Landslide'}</strong><br/>` +
+							`Type: ${p.landslide_type ?? 'n/a'}${p.landslide_class ? ' / ' + p.landslide_class : ''}<br/>` +
+							`Volume: ${volStr}${p.year_text ? '<br/>Year: ' + p.year_text : ''}`
+						).addTo(m);
+				}
+			});
+			m.on('mouseenter', 'hig-landslides-layer', () => { m.getCanvas().style.cursor = 'pointer'; });
+			m.on('mouseleave', 'hig-landslides-layer', () => { m.getCanvas().style.cursor = ''; });
 
 			// Pulse animation for top 10
 			let startTime = Date.now();
