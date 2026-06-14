@@ -82,6 +82,11 @@ MAX_SAR_PAIR_DAYS = 12  # SAR pairs ≤ this
 MIN_VELOCITY_OBSERVATIONS = 5  # skip points with fewer time-series points
 VELOCITY_OUTLIER_THRESHOLD_M_YR = 10000.0  # cap obvious outliers
 
+# Velocity trend (linear regression of v vs time)
+MIN_TREND_OBSERVATIONS = 10  # need enough points for a meaningful slope
+MIN_TREND_SPAN_YEARS = 2.0  # need a real time baseline to regress over
+SECONDS_PER_YEAR = 365.25 * 86400.0
+
 # ---------------------------------------------------------------------------
 # Output file names
 # ---------------------------------------------------------------------------

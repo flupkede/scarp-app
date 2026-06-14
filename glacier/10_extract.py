@@ -16,7 +16,6 @@ Usage:
 
 import json
 import sys
-from pathlib import Path
 
 import geopandas as gpd
 import httpx
@@ -32,8 +31,11 @@ from config import (
     DATA_RAW,
     GLACIER_POINTS_OF_INTEREST,
     ITS_LIVE_CATALOG_URL,
+    MIN_TREND_OBSERVATIONS,
+    MIN_TREND_SPAN_YEARS,
     MIN_VELOCITY_OBSERVATIONS,
     SCARP_DATA,
+    SECONDS_PER_YEAR,
     SE_ALASKA_BBOX_WGS84,
     VELOCITY_OUTLIER_THRESHOLD_M_YR,
     VELOCITY_SUMMARY_FILE,
@@ -300,42 +302,7 @@ def main() -> None:
     print(f"Saved time series -> {ts_path}")
 
     # Step 5: Compute summary stats per point
-    print("\nComputing summary statistics ...")
-    summary_rows = []
-    for point_id, group in combined.groupby("point_id"):
-        v_clean = group["v"].dropna()
-        if len(v_clean) == 0:
-            continue
-
-        lon = group["lon"].iloc[0]
-        lat = group["lat"].iloc[0]
-        dates = pd.to_datetime(group["mid_date"])
-
-        summary_rows.append(
-            {
-                "point_id": point_id,
-                "lon": lon,
-                "lat": lat,
-                "geometry": Point(lon, lat),
-                "obs_count": len(v_clean),
-                "v_mean": float(v_clean.mean()),
-                "v_max": float(v_clean.max()),
-                "v_std": float(v_clean.std()),
-                "v_median": float(v_clean.median()),
-                "date_start": str(dates.min())[:10],
-                "date_end": str(dates.max())[:10],
-                "date_span_years": float(
-                    (dates.max() - dates.min()).days / 365.25
-                ),
-                # Trend: simple linear regression of v vs time
-                "v_trend_m_yr_per_year": _compute_trend(v_clean.values, dates),
-            }
-        )
-
-    summary_gdf = gpd.GeoDataFrame(summary_rows, crs="EPSG:4326")
-    summary_path = DATA_PROCESSED / VELOCITY_SUMMARY_FILE
-    summary_gdf.to_file(summary_path, driver="GeoJSON")
-    print(f"Saved summary -> {summary_path} ({len(summary_gdf)} points)")
+    summary_gdf = compute_summary(combined)
 
     # Print stats
     print("\n" + "=" * 60)
@@ -359,19 +326,103 @@ def main() -> None:
     print("\nDone. Run 20_visualize.py to generate plots and maps.")
 
 
+def compute_summary(combined: pd.DataFrame) -> gpd.GeoDataFrame:
+    """Compute per-point velocity summary stats (incl. a robust linear trend).
+
+    Writes velocity_summary.geojson and returns the GeoDataFrame. Reused by both
+    a full extraction run and the `--from-parquet` regeneration path.
+    """
+    print("\nComputing summary statistics ...")
+    summary_rows = []
+    for point_id, group in combined.groupby("point_id"):
+        v_clean = group["v"].dropna()
+        if len(v_clean) == 0:
+            continue
+
+        lon = float(group["lon"].iloc[0])
+        lat = float(group["lat"].iloc[0])
+        dates = pd.to_datetime(group["mid_date"])
+
+        summary_rows.append(
+            {
+                "point_id": point_id,
+                "lon": lon,
+                "lat": lat,
+                "geometry": Point(lon, lat),
+                "obs_count": len(v_clean),
+                "v_mean": float(v_clean.mean()),
+                "v_max": float(v_clean.max()),
+                "v_std": float(v_clean.std()),
+                "v_median": float(v_clean.median()),
+                "date_start": str(dates.min())[:10],
+                "date_end": str(dates.max())[:10],
+                "date_span_years": float((dates.max() - dates.min()).days / 365.25),
+                # Trend: pass aligned full-length v and dates; the trend
+                # function drops NaN/NaT and sorts internally.
+                "v_trend_m_yr_per_year": _compute_trend(
+                    group["v"].to_numpy(), dates
+                ),
+            }
+        )
+
+    summary_gdf = gpd.GeoDataFrame(summary_rows, crs="EPSG:4326")
+    summary_path = DATA_PROCESSED / VELOCITY_SUMMARY_FILE
+    summary_gdf.to_file(summary_path, driver="GeoJSON")
+    print(f"Saved summary -> {summary_path} ({len(summary_gdf)} points)")
+    return summary_gdf
+
+
+def regenerate_summary_from_parquet() -> gpd.GeoDataFrame:
+    """Recompute velocity_summary.geojson from the cached time-series parquet.
+
+    Avoids a full network re-extraction when only the summary/trend logic changed.
+    """
+    ts_path = DATA_PROCESSED / VELOCITY_TIMESERIES_FILE
+    if not ts_path.exists():
+        print(f"Error: {ts_path} not found — run a full extraction first.")
+        sys.exit(1)
+    print(f"Loading cached time series from {ts_path} ...")
+    combined = pd.read_parquet(ts_path)
+    print(f"  {len(combined)} observations across {combined['point_id'].nunique()} points")
+    summary_gdf = compute_summary(combined)
+    print("\nTop-10 fastest points:")
+    for _, row in summary_gdf.nlargest(10, "v_mean").iterrows():
+        print(
+            f"  {row['point_id']:20s}  v_mean={row['v_mean']:8.1f}  "
+            f"v_max={row['v_max']:8.1f}  trend={row['v_trend_m_yr_per_year']:+.2f}/yr"
+        )
+    return summary_gdf
+
+
 def _compute_trend(v_values: np.ndarray, dates: pd.Series) -> float:
-    """Compute linear velocity trend (m/yr per year) via simple regression."""
-    if len(v_values) < 10:
+    """Compute linear velocity trend (m/yr per year) via least-squares regression.
+
+    `v_values` and `dates` must be positionally aligned (same point, same order).
+    Builds a clean aligned frame, drops NaT/NaN, sorts chronologically, converts
+    the time axis to fractional years via timedelta.total_seconds() (the
+    pd.to_numeric path silently mis-scales datetime64 and collapses the x-range),
+    then regresses. Returns 0.0 when there is too little signal to trust a slope.
+    """
+    frame = pd.DataFrame(
+        {"date": pd.to_datetime(pd.Series(dates).values, errors="coerce"), "v": v_values}
+    ).dropna()
+    if len(frame) < MIN_TREND_OBSERVATIONS:
         return 0.0
+
+    frame = frame.sort_values("date")
+    years = (frame["date"] - frame["date"].min()).dt.total_seconds() / SECONDS_PER_YEAR
+    if float(years.max()) < MIN_TREND_SPAN_YEARS:
+        return 0.0
+
     try:
-        date_nums = pd.to_numeric(dates.values[: len(v_values)])
-        # Normalize to years from start
-        date_years = (date_nums - date_nums[0]) / 1e9 / 86400 / 365.25
-        coeffs = np.polyfit(date_years, v_values, 1)
-        return float(coeffs[0])
-    except Exception:
+        slope = np.polyfit(years.to_numpy(), frame["v"].to_numpy(), 1)[0]
+    except (np.linalg.LinAlgError, ValueError):
         return 0.0
+    return float(slope)
 
 
 if __name__ == "__main__":
-    main()
+    if "--from-parquet" in sys.argv:
+        regenerate_summary_from_parquet()
+    else:
+        main()
