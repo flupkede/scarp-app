@@ -8,9 +8,10 @@ reprojects to EPSG:4326.
 
 Hig's survey circles (data/processed/hig_survey_circles.geojson) are the
 strongest confidence signal — where Hig has actually ground-truthed, we know the
-slope situation regardless of the public-data proxies. They are added as an extra
-signal and the denominator grows to match, so surveyed fjords read as
-higher-confidence and unsurveyed ones honestly read as data-limited.
+slope situation regardless of the public-data proxies. They are added as a
+BOOST-only signal: the denominator stays 5 and confidence is clipped to 1.0, so
+surveyed fjords gain confidence (saturating at 1.0) without deflating unsurveyed
+areas, which honestly keep reading as data-limited.
 
 Usage:
     cd C:/WorkArea/AI/scarp
