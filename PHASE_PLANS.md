@@ -49,6 +49,17 @@ slider pattern (`frontend/src/routes/story/+page.svelte`).
 **Key clarification.** ITS_LIVE = *velocity*, not *ice-front position*. Retreat
 data does not exist; we begin creating it by hand here (ground truth only).
 
+**Progress (branch `feature/phase1-itslive`):**
+- ✅ Stage 1.0 — lw raster wired (`prep/00_download.py`)
+- ✅ Stage 1.1 — `glacier/15_explore.py` analytics (annual/seasonal/trend/episodes/gaps)
+- ⏭️ Stage 1.2 — **de-scoped**: `glacier/20_visualize.py` already produces velocity
+  time-series + sawtooth figures; the new `glacier_exploration.json` + episode
+  markers are the substantive outputs. Revisit only if Hig wants exploration-driven figures.
+- ✅ Stage 1.3 — API endpoints (`/api/layers/glacier_episodes`, `/glacier_timeseries`)
+- ⬜ Stage 1.4 — instrument shell: basemap switcher + opacity (frontend) — NEXT
+- ⬜ Stage 1.5 — before/after swipe + velocity chart (frontend)
+- ✅ Stage 1.6 — ice-front ground-truth scaffolding + validator (`glacier/17_icefront_check.py`)
+
 ### Stage 1.1 — ITS_LIVE exploration analytics (Python)
 - New `glacier/15_explore.py` (reads the cached time-series parquet, no network).
 - Compute per glacier of interest (start: Tracy Arm, Barry Arm, Columbia, +top
