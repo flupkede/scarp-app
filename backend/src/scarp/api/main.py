@@ -115,6 +115,29 @@ async def lifespan(app: FastAPI):
             setattr(app.state, attr, None)
             logger.info("%s not found — serving empty", filename)
 
+    # Load glacier exploration outputs if available (Phase 1 — glacier/15_explore.py)
+    glacier_episodes_path = data_dir / "glacier_episodes.geojson"
+    if glacier_episodes_path.exists():
+        app.state.glacier_episodes = json.loads(glacier_episodes_path.read_text())
+        logger.info(
+            "Loaded glacier episodes (%d features)",
+            len(app.state.glacier_episodes["features"]),
+        )
+    else:
+        app.state.glacier_episodes = None
+        logger.info("Glacier episodes layer not found — serving empty")
+
+    glacier_ts_path = data_dir / "glacier_timeseries.json"
+    if glacier_ts_path.exists():
+        app.state.glacier_timeseries = json.loads(glacier_ts_path.read_text())
+        logger.info(
+            "Loaded glacier timeseries (%d points)",
+            len(app.state.glacier_timeseries),
+        )
+    else:
+        app.state.glacier_timeseries = None
+        logger.info("Glacier timeseries not found — serving empty")
+
     zones_count = len(app.state.zones["features"])
     slides_count = len(app.state.slides_features)
     stations_count = len(app.state.stations["features"])

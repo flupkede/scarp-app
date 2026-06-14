@@ -44,6 +44,12 @@ def client():
         p = DATA_DIR / fname
         setattr(app.state, attr, json.loads(p.read_text()) if p.exists() else None)
 
+    # Glacier exploration outputs (published by glacier/15_explore.py)
+    ep = DATA_DIR / "glacier_episodes.geojson"
+    app.state.glacier_episodes = json.loads(ep.read_text()) if ep.exists() else None
+    ts = DATA_DIR / "glacier_timeseries.json"
+    app.state.glacier_timeseries = json.loads(ts.read_text()) if ts.exists() else None
+
     return TestClient(app)
 
 
@@ -56,6 +62,8 @@ class TestHealth:
         assert "version" in data
         assert "llm_provider" in data
         assert "llm_model" in data
+        # Honest-labeling flag (Phase 0): score is an uncalibrated heuristic
+        assert data["calibration"] == "uncalibrated_heuristic"
 
     def test_api_health_alias(self, client):
         r = client.get("/api/health")
@@ -70,6 +78,8 @@ class TestZones:
         data = r.json()
         assert data["type"] == "FeatureCollection"
         assert len(data["features"]) == 10
+        # Phase 0 honest-labeling flag travels with the collection
+        assert data["calibration"] == "uncalibrated_heuristic"
 
     def test_zones_feature_shape(self, client):
         """Verify feature properties match frontend ZoneFeature interface."""
@@ -192,6 +202,28 @@ class TestLayers:
         data = r.json()
         assert len(data["features"]) == 525
         assert "reviewed" in data["features"][0]["properties"]
+
+    def test_glacier_episodes(self, client):
+        r = client.get("/api/layers/glacier_episodes")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["type"] == "FeatureCollection"
+        assert len(data["features"]) > 0
+        props = data["features"][0]["properties"]
+        assert "year" in props
+        assert "delta_v" in props
+        assert props["direction"] in ("accelerate", "decelerate")
+
+    def test_glacier_timeseries(self, client):
+        r = client.get("/api/layers/glacier_timeseries")
+        assert r.status_code == 200
+        data = r.json()
+        # dict keyed by point_id, each with an annual series
+        assert isinstance(data, dict)
+        assert len(data) > 0
+        sample = next(iter(data.values()))
+        assert "annual" in sample
+        assert "trend_m_yr_per_year" in sample
 
 
 class TestSearch:

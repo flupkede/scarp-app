@@ -84,3 +84,18 @@ async def get_hig_polygons(request: Request):
 async def get_hig_survey_circles(request: Request):
     """Hig's survey circles (where he ground-truthed) — hig_survey_circles.geojson."""
     return _optional_layer(request, "hig_survey_circles", "Hig survey circles")
+
+
+@router.get("/glacier_episodes", response_model=None)
+async def get_glacier_episodes(request: Request):
+    """ITS_LIVE accelerate/decelerate episodes (the sawtooth) — glacier_episodes.geojson."""
+    return _optional_layer(request, "glacier_episodes", "Glacier episodes layer")
+
+
+@router.get("/glacier_timeseries", response_model=None)
+async def get_glacier_timeseries(request: Request):
+    """Per-point ITS_LIVE annual velocity series + episodes for charts — glacier_timeseries.json.
+
+    Not a GeoJSON layer: a dict keyed by point_id (see glacier/15_explore.py).
+    """
+    return _optional_layer(request, "glacier_timeseries", "Glacier timeseries")
