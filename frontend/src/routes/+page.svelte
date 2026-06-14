@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { getZoneStore } from '$lib/stores/zones.svelte';
-	import { fetchZones, fetchSlides, fetchStations, fetchConfidence, fetchGlacierVelocity, fetchHigLandslides, fetchHigPolygons, fetchHigSurveyCircles, type ZoneFeature } from '$lib/api';
+	import { fetchZones, fetchSlides, fetchStations, fetchConfidence, fetchGlacierVelocity, fetchHigLandslides, fetchHigPolygons, fetchHigSurveyCircles, fetchGlacierTimeseries, type ZoneFeature, type GlacierTimeseries } from '$lib/api';
 	import MapComponent from '$lib/components/Map.svelte';
 	import Splash from '$lib/components/Splash.svelte';
 	import PriorityList from '$lib/components/PriorityList.svelte';
@@ -9,6 +9,7 @@
 	import LayerToggle from '$lib/components/LayerToggle.svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import BasemapSwitcher from '$lib/components/BasemapSwitcher.svelte';
+	import BeforeAfterSwipe from '$lib/components/BeforeAfterSwipe.svelte';
 	import { DEFAULT_BASEMAP_ID } from '$lib/basemaps';
 
 	const store = getZoneStore();
@@ -24,6 +25,8 @@
 	let higLandslidesData = $state<GeoJSON.FeatureCollection | null>(null);
 	let higPolygonsData = $state<GeoJSON.FeatureCollection | null>(null);
 	let higSurveyCirclesData = $state<GeoJSON.FeatureCollection | null>(null);
+	let glacierTimeseriesData = $state<GlacierTimeseries | null>(null);
+	let showCompare = $state(false);
 	let dataReady = $state(false);
 	let dataError = $state<string | null>(null);
 
@@ -83,7 +86,7 @@
 	onMount(async () => {
 		try {
 			// Load data from API
-			const [zones, slides, stations, confidence, glacierVelocity, higLandslides, higPolygons, higSurveyCircles] = await Promise.all([
+			const [zones, slides, stations, confidence, glacierVelocity, higLandslides, higPolygons, higSurveyCircles, glacierTimeseries] = await Promise.all([
 				fetchZones(120),
 				fetchSlides(),
 				fetchStations(),
@@ -91,7 +94,8 @@
 				fetchGlacierVelocity(), // null if glacier pipeline hasn't run — handled gracefully
 				fetchHigLandslides(), // null if inventory pipeline hasn't run — handled gracefully
 				fetchHigPolygons(),
-				fetchHigSurveyCircles()
+				fetchHigSurveyCircles(),
+				fetchGlacierTimeseries() // null if timeseries pipeline hasn't run — handled gracefully
 			]);
 
 			allSites = zones.features;
@@ -103,6 +107,7 @@
 			higLandslidesData = higLandslides; // null → toggles hidden in LayerToggle
 			higPolygonsData = higPolygons;
 			higSurveyCirclesData = higSurveyCircles;
+			glacierTimeseriesData = glacierTimeseries;
 
 			// Load influence polygons from API
 			try {
@@ -324,7 +329,22 @@
 
 			<!-- Map area — full 100% -->
 			<div class="flex-1 relative">
-				<BasemapSwitcher {basemapId} onSelect={(id) => (basemapId = id)} />
+				<BasemapSwitcher currentId={basemapId} onSelect={(id) => (basemapId = id)} />
+				<!-- Before/After comparison toggle -->
+				<div class="absolute bottom-8 right-32 z-10">
+					<button
+						onclick={() => (showCompare = !showCompare)}
+						class="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm rounded-lg shadow border border-stone-200 px-2.5 py-1.5 text-stone-700 hover:bg-white transition-colors text-[11px] select-none"
+						title="Compare current basemap with USGS historical topo"
+					>
+						<!-- Split-screen icon -->
+						<svg class="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+							<rect x="1" y="2" width="14" height="12" rx="1.5"/>
+							<line x1="8" y1="2" x2="8" y2="14"/>
+						</svg>
+						Compare
+					</button>
+				</div>
 				<MapComponent
 					{layerState}
 					{basemapId}
@@ -351,11 +371,20 @@
 						nearbySlides={selectedNearbySlides}
 						regionLabel={selectedRegion}
 						isLowConfidence={selectedIsLowConfidence}
+						glacierTimeseries={glacierTimeseriesData}
 						onClose={() => {
 							selectedSite = null;
 							selectedNearbySlides = [];
 							selectedIsLowConfidence = false;
 						}}
+					/>
+				{/if}
+
+				{#if showCompare}
+					<BeforeAfterSwipe
+						leftId={basemapId}
+						rightId="usgs-historical-topo"
+						onClose={() => (showCompare = false)}
 					/>
 				{/if}
 			</div>

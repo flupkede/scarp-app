@@ -190,3 +190,33 @@ export async function fetchHigPolygons(): Promise<GeoJSON.FeatureCollection | nu
 export async function fetchHigSurveyCircles(): Promise<GeoJSON.FeatureCollection | null> {
 	return fetchOptionalLayer('/api/layers/hig_survey_circles');
 }
+
+/** One glacier's annual velocity series + metadata. */
+export interface GlacierTimeseriesPoint {
+	point_id: string;
+	is_named_glacier: boolean;
+	v_mean: number;
+	trend_m_yr_per_year: number;
+	annual: Array<{ year: number; v_median: number; n: number }>;
+	episodes: Array<{ year: number; delta_v: number; direction: 'accelerate' | 'decelerate' }>;
+	retreat_tail: boolean;
+}
+
+/** Full timeseries dict keyed by point_id. */
+export type GlacierTimeseries = Record<string, GlacierTimeseriesPoint>;
+
+/**
+ * Fetch the ITS_LIVE glacier velocity timeseries (light charts payload).
+ * Returns null if not generated yet (404) — chart hidden in that case.
+ * Note: this endpoint returns a plain JSON object, NOT a FeatureCollection.
+ */
+export async function fetchGlacierTimeseries(): Promise<GlacierTimeseries | null> {
+	try {
+		const res = await fetch(`${API_BASE}/api/layers/glacier_timeseries`);
+		if (res.status === 404) return null;
+		if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
+		return res.json();
+	} catch {
+		return null;
+	}
+}

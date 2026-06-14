@@ -1,12 +1,15 @@
 <script lang="ts">
-	import type { ZoneFeature, NearbySlide } from '$lib/api';
+	import type { ZoneFeature, NearbySlide, GlacierTimeseries } from '$lib/api';
+	import VelocityChart from '$lib/components/VelocityChart.svelte';
 
-	let { site, nearbySlides, regionLabel, isLowConfidence = false, onClose }: {
+	let { site, nearbySlides, regionLabel, isLowConfidence = false, glacierTimeseries = null, onClose }: {
 		site: ZoneFeature;
 		nearbySlides: NearbySlide[];
 		regionLabel: string;
 		/** True when the site falls within a low-confidence data band. */
 		isLowConfidence?: boolean;
+		/** Full ITS_LIVE timeseries dict, or null when not yet generated. */
+		glacierTimeseries?: GlacierTimeseries | null;
 		onClose: () => void;
 	} = $props();
 
@@ -24,6 +27,13 @@
 
 	// Glacier context (ITS_LIVE) — present once the glacier pipeline has run.
 	let glacier = $derived(site.properties.glacier);
+
+	/** Velocity chart data for the nearest named glacier (if available). */
+	let velocityData = $derived(
+		glacierTimeseries && glacier?.nearest_named_glacier
+			? (glacierTimeseries[glacier.nearest_named_glacier] ?? null)
+			: null
+	);
 
 	let rankColor = $derived(
 		site.properties.rank <= 10
@@ -209,6 +219,10 @@
 					<div class="text-stone-400 italic">No ITS_LIVE velocity at this site — context inferred from nearby ice.</div>
 				{/if}
 			</div>
+
+		{#if velocityData}
+			<VelocityChart data={velocityData} />
+		{/if}
 		{/if}
 
 		<!-- Nearby slides -->
